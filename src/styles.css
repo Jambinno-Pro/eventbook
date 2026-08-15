@@ -1,0 +1,2551 @@
+/* =========================================================
+   EVENTBOOK - GLOBAL STYLES
+   Premium Dark Blue / Corporate Theme
+   Font: Helvetica
+   ========================================================= */
+
+
+/* =========================================================
+   ROOT VARIABLES
+   ========================================================= */
+
+:root {
+  /* Navy */
+  --navy-950: #020a16;
+  --navy-900: #03101f;
+  --navy-850: #04172b;
+  --navy-800: #061d34;
+  --navy-700: #092946;
+
+  /* Blue */
+  --blue: #087cff;
+  --blue-light: #24a2ff;
+  --blue-dark: #075fe2;
+
+  /* Text */
+  --white: #f7fbff;
+  --muted: #a8bbcf;
+  --muted-dark: #738ba5;
+
+  /* Borders */
+  --line: rgba(83, 143, 201, 0.27);
+  --line-bright: rgba(14, 125, 255, 0.6);
+
+  /* Status */
+  --green: #18d0a2;
+  --danger: #ff626c;
+
+  /* Shadows */
+  --shadow:
+    0 30px 90px rgba(0, 0, 0, 0.38);
+}
+
+
+/* =========================================================
+   RESET
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+
+  color: var(--white);
+
+  font-family: Helvetica, Arial, sans-serif;
+
+  background:
+    radial-gradient(
+      circle at 12% 5%,
+      rgba(0, 120, 255, 0.10),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 88% 20%,
+      rgba(0, 90, 255, 0.07),
+      transparent 30%
+    ),
+    var(--navy-950);
+}
+
+
+/* =========================================================
+   BACKGROUND GRID
+   ========================================================= */
+
+body::before {
+  content: "";
+
+  position: fixed;
+
+  inset: 0;
+
+  pointer-events: none;
+
+  opacity: 0.22;
+
+  background-image:
+    linear-gradient(
+      rgba(60, 130, 190, 0.04) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(60, 130, 190, 0.04) 1px,
+      transparent 1px
+    );
+
+  background-size: 40px 40px;
+}
+
+
+/* =========================================================
+   FORM CONTROLS
+   ========================================================= */
+
+button,
+input,
+textarea,
+select {
+  font-family: Helvetica, Arial, sans-serif;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   HEADINGS
+   ========================================================= */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: Helvetica, Arial, sans-serif;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   APP
+   ========================================================= */
+
+.app {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.topbar {
+  height: 79px;
+
+  position: sticky;
+  top: 0;
+
+  z-index: 100;
+
+  border-bottom:
+    1px solid rgba(76, 133, 188, 0.25);
+
+  background:
+    rgba(2, 11, 23, 0.94);
+
+  backdrop-filter: blur(18px);
+}
+
+
+.nav-inner {
+  max-width: 1180px;
+
+  height: 100%;
+
+  margin: auto;
+
+  padding: 0 28px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 25px;
+}
+
+
+/* =========================================================
+   BRAND
+   ========================================================= */
+
+.brand {
+  border: 0;
+
+  background: transparent;
+
+  color: white;
+
+  padding: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 11px;
+
+  text-align: left;
+}
+
+
+.brand-icon {
+  width: 44px;
+  height: 44px;
+
+  color: var(--blue);
+
+  display: grid;
+  place-items: center;
+}
+
+
+.brand strong {
+  display: block;
+
+  font-size: 23px;
+
+  line-height: 1;
+
+  letter-spacing: -0.8px;
+}
+
+
+.brand strong span {
+  color: var(--blue);
+}
+
+
+.brand small {
+  display: block;
+
+  margin-top: 4px;
+
+  color: var(--muted);
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+.main-nav {
+  height: 100%;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 40px;
+}
+
+
+.main-nav button {
+  height: 100%;
+
+  border: 0;
+
+  border-bottom: 2px solid transparent;
+
+  background: transparent;
+
+  color: #aebfd3;
+
+  padding: 0;
+
+  font-weight: 600;
+}
+
+
+.main-nav button:hover,
+.main-nav button.active {
+  color: white;
+
+  border-bottom-color: var(--blue);
+}
+
+
+/* =========================================================
+   ADMIN LOGIN
+   ========================================================= */
+
+.admin-login {
+  min-height: 43px;
+
+  padding: 0 17px;
+
+  border:
+    1px solid var(--blue);
+
+  border-radius: 6px;
+
+  background:
+    rgba(4, 24, 45, 0.75);
+
+  color: white;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  font-weight: 700;
+}
+
+
+.admin-login:hover {
+  background:
+    rgba(0, 111, 255, 0.15);
+}
+
+
+/* =========================================================
+   MOBILE MENU
+   ========================================================= */
+
+.mobile-menu {
+  display: none;
+
+  border:
+    1px solid var(--line);
+
+  background: transparent;
+
+  color: white;
+
+  padding: 8px;
+
+  border-radius: 6px;
+}
+
+
+/* =========================================================
+   GENERAL PAGE LAYOUT
+   ========================================================= */
+
+.page-section,
+.hero {
+  width:
+    min(
+      1180px,
+      calc(100% - 40px)
+    );
+
+  margin-left: auto;
+  margin-right: auto;
+}
+
+
+.page-section {
+  padding: 48px 0;
+}
+
+
+/* =========================================================
+   EYEBROWS
+   ========================================================= */
+
+.eyebrow {
+  margin: 0 0 17px;
+
+  color: #31a4ff;
+
+  font-size: 11px;
+
+  font-weight: 800;
+
+  letter-spacing: 2px;
+}
+
+
+.eyebrow-pill {
+  display: inline-block;
+
+  padding: 10px 17px;
+
+  margin-bottom: 23px;
+
+  border-radius: 30px;
+
+  color: #3aa9ff;
+
+  background:
+    rgba(12, 101, 181, 0.12);
+
+  font-size: 11px;
+
+  font-weight: 800;
+
+  letter-spacing: 1.7px;
+}
+
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.primary-btn,
+.outline-btn,
+.social-mini,
+.danger-btn {
+  min-height: 43px;
+
+  border-radius: 6px;
+
+  padding: 0 16px;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 8px;
+
+  font-weight: 700;
+
+  transition: 0.2s ease;
+}
+
+
+/* Primary */
+
+.primary-btn {
+  color: white;
+
+  border:
+    1px solid #0c76ff;
+
+  background:
+    linear-gradient(
+      135deg,
+      #147bff,
+      #075de1
+    );
+
+  box-shadow:
+    0 8px 25px
+    rgba(0, 110, 255, 0.2);
+}
+
+
+.primary-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 12px 30px
+    rgba(0, 110, 255, 0.34);
+}
+
+
+/* Outline */
+
+.outline-btn {
+  color: #e6f3ff;
+
+  background:
+    rgba(4, 21, 39, 0.5);
+
+  border:
+    1px solid rgba(91, 143, 190, 0.34);
+}
+
+
+.outline-btn:hover {
+  border-color: var(--blue);
+
+  background:
+    rgba(6, 55, 94, 0.45);
+}
+
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.hero {
+  min-height: 580px;
+
+  margin-top: 23px;
+
+  display: grid;
+
+  grid-template-columns:
+    1.08fr 0.92fr;
+
+  border:
+    1px solid rgba(77, 135, 194, 0.34);
+
+  border-radius: 13px;
+
+  overflow: hidden;
+
+  position: relative;
+
+  background:
+    radial-gradient(
+      circle at 70% 45%,
+      rgba(0, 112, 255, 0.08),
+      transparent 35%
+    ),
+    rgba(3, 17, 32, 0.84);
+
+  box-shadow: var(--shadow);
+}
+
+
+.hero::before {
+  content: "";
+
+  position: absolute;
+
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.014) 0,
+      rgba(255, 255, 255, 0.014) 1px,
+      transparent 1px,
+      transparent 8px
+    );
+}
+
+
+/* =========================================================
+   HERO COPY
+   ========================================================= */
+
+.hero-copy {
+  position: relative;
+
+  z-index: 2;
+
+  padding: 45px 42px 35px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: center;
+}
+
+
+.hero-copy h1 {
+  margin: 0 0 25px;
+
+  font-family:
+    Helvetica, Arial, sans-serif;
+
+  font-size:
+    clamp(
+      48px,
+      5vw,
+      66px
+    );
+
+  line-height: 0.98;
+
+  letter-spacing: -2.5px;
+}
+
+
+.hero-copy h1 span {
+  color: var(--blue);
+}
+
+
+.hero-copy > p:not(.eyebrow) {
+  color: #bfd1e5;
+
+  font-size: 19px;
+
+  line-height: 1.65;
+
+  margin: 0 0 28px;
+}
+
+
+.hero-btn {
+  align-self: flex-start;
+
+  min-height: 50px;
+}
+
+
+/* =========================================================
+   HERO FEATURES
+   ========================================================= */
+
+.feature-row {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 18px;
+
+  margin-top: 40px;
+}
+
+
+.feature {
+  display: flex;
+
+  gap: 10px;
+
+  min-width: 0;
+}
+
+
+.feature-icon {
+  color: var(--blue);
+
+  flex: 0 0 auto;
+}
+
+
+.feature strong {
+  font-size: 12px;
+}
+
+
+.feature p {
+  color: #91a8c0;
+
+  font-size: 11px;
+
+  line-height: 1.55;
+
+  margin: 7px 0 0;
+}
+
+
+/* =========================================================
+   HERO FLYER
+   ========================================================= */
+
+.hero-flyer-side {
+  padding: 20px 48px 45px 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+}
+
+
+.flyer-frame {
+  width:
+    min(
+      410px,
+      100%
+    );
+
+  aspect-ratio: 0.72;
+
+  position: relative;
+
+  border:
+    1px solid rgba(27, 142, 255, 0.58);
+
+  border-radius: 13px;
+
+  background: #04162a;
+
+  box-shadow:
+    0 25px 65px
+    rgba(0, 0, 0, 0.45);
+}
+
+
+.hero-flyer {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+
+  border-radius: 12px;
+}
+
+
+.flyer-placeholder {
+  width: 100%;
+  height: 100%;
+
+  border-radius: 12px;
+
+  overflow: hidden;
+
+  position: relative;
+
+  padding: 35px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: center;
+
+  background:
+    radial-gradient(
+      circle at 75% 25%,
+      rgba(0, 126, 255, 0.35),
+      transparent 35%
+    ),
+    linear-gradient(
+      145deg,
+      #072443,
+      #020914
+    );
+}
+
+
+.placeholder-glow {
+  position: absolute;
+
+  width: 250px;
+  height: 250px;
+
+  border-radius: 50%;
+
+  background:
+    rgba(0, 130, 255, 0.16);
+
+  filter: blur(50px);
+
+  right: -80px;
+  top: 50px;
+}
+
+
+.flyer-placeholder p {
+  position: relative;
+
+  margin: 0;
+
+  font-size: 25px;
+}
+
+
+.flyer-placeholder strong {
+  position: relative;
+
+  color: #ffbd35;
+
+  font-size: 36px;
+
+  line-height: 1;
+
+  margin: 6px 0;
+}
+
+
+.flyer-placeholder small {
+  position: relative;
+
+  margin-top: 20px;
+
+  color: #b7cee3;
+
+  font-size: 10px;
+
+  letter-spacing: 1px;
+}
+
+
+/* =========================================================
+   HERO SLIDER CONTROLS
+   ========================================================= */
+
+.slider-arrow {
+  position: absolute;
+
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  width: 46px;
+  height: 46px;
+
+  border-radius: 50%;
+
+  display: grid;
+
+  place-items: center;
+
+  color: white;
+
+  background: #061d34;
+
+  border:
+    1px solid rgba(28, 143, 255, 0.58);
+
+  z-index: 5;
+}
+
+
+.slider-arrow.left {
+  left: -55px;
+}
+
+
+.slider-arrow.right {
+  right: -55px;
+}
+
+
+.slider-arrow:hover {
+  background: #0a3153;
+}
+
+
+.slider-dots {
+  position: absolute;
+
+  bottom: 0;
+
+  left: 50%;
+
+  transform:
+    translate(-50%, 28px);
+
+  display: flex;
+
+  gap: 10px;
+}
+
+
+.slider-dots button {
+  width: 10px;
+  height: 10px;
+
+  border: 0;
+
+  border-radius: 50%;
+
+  background: #49627a;
+
+  padding: 0;
+}
+
+
+.slider-dots button.active {
+  background: var(--blue);
+
+  box-shadow:
+    0 0 12px
+    rgba(0, 130, 255, 0.8);
+}
+
+
+/* =========================================================
+   SECTION HEADINGS
+   ========================================================= */
+
+.section-heading {
+  display: flex;
+
+  align-items: flex-end;
+
+  justify-content: space-between;
+
+  gap: 25px;
+
+  margin-bottom: 25px;
+}
+
+
+.section-heading h2 {
+  margin: 0 0 7px;
+
+  font-size: 34px;
+}
+
+
+.section-heading p:not(.eyebrow) {
+  color: var(--muted);
+
+  margin: 0;
+}
+
+
+.section-heading.compact {
+  align-items: center;
+}
+
+
+.section-heading.compact h2::after {
+  content: "";
+
+  display: block;
+
+  width: 33px;
+
+  height: 2px;
+
+  background: var(--blue);
+
+  margin-top: 10px;
+}
+
+
+/* =========================================================
+   SEARCH BOX
+   ========================================================= */
+
+.search-box {
+  width: 270px;
+
+  height: 42px;
+
+  border:
+    1px solid rgba(93, 143, 187, 0.36);
+
+  border-radius: 6px;
+
+  padding: 0 12px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 9px;
+
+  color: #7594b2;
+
+  background:
+    rgba(4, 17, 31, 0.75);
+}
+
+
+.search-box input {
+  width: 100%;
+
+  border: 0;
+
+  outline: 0;
+
+  color: white;
+
+  background: transparent;
+}
+
+
+.search-box input::placeholder {
+  color: #7f95ab;
+}
+
+
+/* =========================================================
+   EVENT LIST
+   ========================================================= */
+
+.event-list {
+  display: grid;
+
+  gap: 13px;
+}
+
+
+/* =========================================================
+   IMPORTANT EVENT CARD FIX
+   =========================================================
+   
+   Three clear columns:
+
+   1. Flyer
+   2. Event information
+   3. Buttons
+
+   The information column has horizontal padding so the
+   description can NEVER sit underneath the flyer.
+   ========================================================= */
+
+.event-row {
+  width: 100%;
+
+  min-height: 257px;
+
+  display: grid;
+
+  grid-template-columns:
+    250px
+    minmax(0, 1fr)
+    185px;
+
+  align-items: stretch;
+
+  overflow: hidden;
+
+  border:
+    1px solid rgba(69, 126, 180, 0.26);
+
+  border-radius: 7px;
+
+  background:
+    linear-gradient(
+      105deg,
+      rgba(5, 23, 41, 0.9),
+      rgba(2, 14, 27, 0.8)
+    );
+}
+
+
+/* =========================================================
+   EVENT FLYER
+   ========================================================= */
+
+.event-poster {
+  width: 250px;
+
+  min-width: 250px;
+
+  min-height: 257px;
+
+  height: 100%;
+
+  overflow: hidden;
+
+  position: relative;
+
+  z-index: 1;
+
+  background: #071a30;
+}
+
+
+.event-poster img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+
+  object-position: center;
+}
+
+
+.event-poster .flyer-placeholder {
+  width: 100%;
+  height: 100%;
+
+  border-radius: 0;
+}
+
+
+/* =========================================================
+   EVENT INFORMATION
+   =========================================================
+   
+   IMPORTANT:
+   The LEFT and RIGHT padding here fixes the problem
+   shown in your screenshot.
+   ========================================================= */
+
+.event-info {
+  min-width: 0;
+
+  width: 100%;
+
+  padding:
+    27px 26px;
+
+  position: relative;
+
+  z-index: 2;
+
+  overflow: hidden;
+}
+
+
+.event-info h3 {
+  margin:
+    0 0 18px;
+
+  font-size: 20px;
+
+  line-height: 1.3;
+
+  color: white;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   EVENT META
+   ========================================================= */
+
+.event-meta {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 18px;
+
+  color: #bfd1e4;
+
+  font-size: 13px;
+
+  margin-bottom: 2px;
+}
+
+
+.event-meta span {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  white-space: nowrap;
+}
+
+
+.event-meta svg {
+  color: var(--blue);
+
+  flex-shrink: 0;
+}
+
+
+/* =========================================================
+   EVENT DESCRIPTION
+   ========================================================= */
+
+.event-info > p {
+  width: 100%;
+
+  max-width: 680px;
+
+  margin:
+    18px 0 14px;
+
+  color: #b9ccdf;
+
+  font-size: 14px;
+
+  line-height: 1.7;
+
+  overflow-wrap: anywhere;
+
+  word-break: normal;
+}
+
+
+/* =========================================================
+   AVAILABILITY
+   ========================================================= */
+
+.availability {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 6px;
+
+  color: var(--green);
+
+  background:
+    rgba(20, 190, 151, 0.1);
+
+  border:
+    1px solid rgba(20, 190, 151, 0.16);
+
+  border-radius: 20px;
+
+  padding: 7px 11px;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   EVENT ACTIONS
+   ========================================================= */
+
+.event-actions {
+  min-width: 0;
+
+  padding:
+    26px 24px 26px 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: center;
+
+  gap: 10px;
+
+  position: relative;
+
+  z-index: 3;
+}
+
+
+.event-actions button {
+  width: 100%;
+
+  min-width: 0;
+}
+
+
+/* =========================================================
+   EMPTY EVENT STATE
+   ========================================================= */
+
+.empty-state {
+  padding: 55px;
+
+  text-align: center;
+
+  color: var(--muted);
+
+  border:
+    1px dashed rgba(85, 140, 190, 0.35);
+
+  border-radius: 9px;
+}
+
+
+/* =========================================================
+   MODALS
+   ========================================================= */
+
+.modal-backdrop {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 500;
+
+  padding: 20px;
+
+  display: grid;
+
+  place-items: center;
+
+  background:
+    rgba(0, 5, 13, 0.8);
+
+  backdrop-filter: blur(7px);
+
+  overflow-y: auto;
+}
+
+
+/* =========================================================
+   MODAL CARD
+   ========================================================= */
+
+.modal-card {
+  width:
+    min(
+      680px,
+      100%
+    );
+
+  max-height:
+    calc(100vh - 40px);
+
+  min-height: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  overflow: hidden;
+
+  position: relative;
+
+  border:
+    1px solid rgba(42, 145, 255, 0.35);
+
+  border-radius: 12px;
+
+  background: #061b30;
+
+  box-shadow:
+    0 30px 90px
+    rgba(0, 0, 0, 0.55);
+}
+
+
+/* =========================================================
+   MODAL CLOSE
+   ========================================================= */
+
+.modal-close {
+  position: absolute;
+
+  right: 13px;
+  top: 13px;
+
+  z-index: 10;
+
+  width: 36px;
+  height: 36px;
+
+  border-radius: 50%;
+
+  display: grid;
+
+  place-items: center;
+
+  color: #d4e8fa;
+
+  border:
+    1px solid rgba(100, 150, 193, 0.28);
+
+  background:
+    rgba(2, 15, 29, 0.75);
+}
+
+
+.modal-close:hover {
+  border-color: var(--blue);
+
+  color: white;
+}
+
+
+/* =========================================================
+   MODAL SCROLL AREA
+   =========================================================
+   
+   This is important for:
+   - View Event
+   - Book Now
+   - Long forms
+   - Small laptop screens
+   ========================================================= */
+
+.modal-scroll {
+  min-height: 0;
+
+  flex: 1 1 auto;
+
+  overflow-y: auto;
+
+  overflow-x: hidden;
+
+  padding:
+    37px 35px 25px;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+
+/* Visible scrollbar */
+
+.modal-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.modal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(70, 140, 200, 0.45);
+
+  border-radius: 10px;
+}
+
+.modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(40, 150, 255, 0.65);
+}
+
+
+.modal-scroll h2 {
+  margin:
+    0 0 18px;
+
+  padding-right: 40px;
+
+  font-size: 33px;
+
+  line-height: 1.1;
+}
+
+
+/* =========================================================
+   DETAIL META
+   ========================================================= */
+
+.detail-meta {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 18px;
+
+  color: #bdd0e3;
+
+  font-size: 13px;
+}
+
+
+.detail-meta span {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+}
+
+
+.detail-meta svg {
+  color: var(--blue);
+}
+
+
+/* =========================================================
+   DETAILS FLYER
+   ========================================================= */
+
+.details-flyer {
+  width:
+    min(
+      280px,
+      100%
+    );
+
+  max-height: 390px;
+
+  display: block;
+
+  object-fit: contain;
+
+  margin: 25px auto;
+
+  border:
+    1px solid rgba(39, 145, 255, 0.35);
+
+  border-radius: 8px;
+
+  background: #020b15;
+}
+
+
+/* =========================================================
+   MODAL DESCRIPTION
+   ========================================================= */
+
+.modal-description {
+  color: #bbccde;
+
+  line-height: 1.75;
+
+  margin: 24px 0;
+}
+
+
+/* =========================================================
+   INFORMATION PANEL
+   ========================================================= */
+
+.info-panel {
+  padding: 16px;
+
+  margin-top: 12px;
+
+  border:
+    1px solid rgba(68, 131, 184, 0.22);
+
+  border-radius: 7px;
+
+  background:
+    rgba(1, 12, 24, 0.4);
+}
+
+
+.info-panel strong {
+  display: block;
+
+  margin-bottom: 7px;
+}
+
+
+.info-panel span {
+  color: var(--green);
+}
+
+
+.info-panel p {
+  color: var(--muted);
+
+  line-height: 1.6;
+
+  margin: 0;
+}
+
+
+/* =========================================================
+   MODAL ACTIONS
+   ========================================================= */
+
+.modal-actions {
+  flex:
+    0 0 auto;
+
+  padding:
+    13px 24px 17px;
+
+  border-top:
+    1px solid rgba(76, 132, 190, 0.18);
+
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 8px;
+
+  background:
+    rgba(2, 14, 27, 0.75);
+}
+
+
+.social-mini {
+  min-height: 38px;
+
+  color: #9bcfff;
+
+  background:
+    rgba(7, 45, 77, 0.45);
+
+  border:
+    1px solid rgba(75, 136, 190, 0.25);
+}
+
+
+/* =========================================================
+   BOOKING FORM
+   ========================================================= */
+
+.booking-form {
+  display: grid;
+
+  gap: 15px;
+}
+
+
+.booking-form label {
+  display: grid;
+
+  gap: 7px;
+
+  color: #dfebf7;
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+
+.booking-form input,
+.booking-form textarea,
+.booking-form select {
+  width: 100%;
+
+  border:
+    1px solid rgba(94, 143, 184, 0.36);
+
+  border-radius: 6px;
+
+  outline: 0;
+
+  padding:
+    12px 13px;
+
+  color: white;
+
+  background: #071d33;
+}
+
+
+.booking-form input:focus,
+.booking-form textarea:focus,
+.booking-form select:focus {
+  border-color: var(--blue);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(0, 120, 255, 0.09);
+}
+
+
+.booking-form textarea {
+  min-height: 110px;
+
+  resize: vertical;
+}
+
+
+.booking-form input[type="file"] {
+  padding: 9px;
+}
+
+
+.booking-form small {
+  color: #7d95ab;
+
+  font-weight: 500;
+
+  line-height: 1.5;
+}
+
+
+.modal-subtitle,
+.remaining-line {
+  color: var(--muted);
+}
+
+
+.remaining-line {
+  margin:
+    15px 0 20px;
+}
+
+
+/* =========================================================
+   SELECTED FILE NAME
+   ========================================================= */
+
+.file-name {
+  padding:
+    10px 12px;
+
+  color: #36dcb5;
+
+  border:
+    1px solid rgba(25, 194, 153, 0.18);
+
+  background:
+    rgba(25, 194, 153, 0.06);
+
+  border-radius: 6px;
+
+  font-size: 12px;
+
+  overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   FORM ERROR
+   ========================================================= */
+
+.form-error {
+  color: #ff9ca3;
+
+  font-size: 12px;
+
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   SUBMIT BUTTON
+   ========================================================= */
+
+.submit-btn {
+  width: 100%;
+
+  min-height: 49px;
+
+  margin-top: 5px;
+}
+
+
+/* =========================================================
+   ADMIN
+   ========================================================= */
+
+.admin-toolbar {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 9px;
+}
+
+
+.admin-card {
+  margin-bottom: 22px;
+
+  overflow: hidden;
+
+  border:
+    1px solid rgba(76, 132, 190, 0.3);
+
+  border-radius: 9px;
+
+  background:
+    rgba(3, 18, 34, 0.82);
+}
+
+
+.admin-card-title {
+  padding:
+    20px 23px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 20px;
+
+  border-bottom:
+    1px solid rgba(76, 132, 190, 0.18);
+}
+
+
+.admin-card-title h3 {
+  margin:
+    0 0 4px;
+}
+
+
+.admin-card-title span {
+  color: var(--muted);
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   ADMIN EVENT
+   ========================================================= */
+
+.admin-event {
+  min-height: 100px;
+
+  padding:
+    15px 22px;
+
+  display: grid;
+
+  grid-template-columns:
+    70px
+    minmax(0, 1fr)
+    auto;
+
+  align-items: center;
+
+  gap: 18px;
+
+  border-bottom:
+    1px solid rgba(76, 132, 190, 0.13);
+}
+
+
+.admin-thumb {
+  width: 70px;
+  height: 80px;
+
+  overflow: hidden;
+
+  border-radius: 5px;
+
+  background: #071a30;
+}
+
+
+.admin-thumb img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  display: block;
+}
+
+
+.admin-event-info {
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+
+.admin-event-info strong {
+  font-size: 14px;
+
+  overflow-wrap: anywhere;
+}
+
+
+.admin-event-info span {
+  color: var(--muted);
+
+  font-size: 12px;
+}
+
+
+.admin-actions {
+  display: flex;
+
+  gap: 8px;
+}
+
+
+/* =========================================================
+   ADMIN BUTTONS
+   ========================================================= */
+
+.danger-btn {
+  color: #ffabb1;
+
+  border:
+    1px solid rgba(255, 93, 104, 0.3);
+
+  background:
+    rgba(255, 93, 104, 0.07);
+}
+
+
+.text-btn {
+  color: #36a7ff;
+
+  border: 0;
+
+  background: transparent;
+
+  font-weight: 700;
+
+  padding: 0;
+}
+
+
+.text-btn:hover {
+  color: #6cc2ff;
+}
+
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.table-scroll {
+  width: 100%;
+
+  overflow-x: auto;
+}
+
+
+table {
+  width: 100%;
+
+  min-width: 980px;
+
+  border-collapse: collapse;
+}
+
+
+th,
+td {
+  padding:
+    13px 15px;
+
+  text-align: left;
+
+  border-bottom:
+    1px solid rgba(76, 132, 190, 0.14);
+
+  font-size: 12px;
+}
+
+
+th {
+  color: #8eafcd;
+
+  background:
+    rgba(5, 29, 51, 0.55);
+}
+
+
+td {
+  color: #c3d3e4;
+}
+
+
+/* =========================================================
+   PROOF VIEWER
+   ========================================================= */
+
+.proof-modal {
+  width:
+    min(
+      950px,
+      100%
+    );
+}
+
+
+.proof-head {
+  padding:
+    32px 35px 14px;
+}
+
+
+.proof-head h2 {
+  margin:
+    0 0 5px;
+}
+
+
+.proof-head p:last-child {
+  color: var(--muted);
+
+  margin: 0;
+}
+
+
+.proof-viewer {
+  min-height: 300px;
+
+  max-height: 65vh;
+
+  overflow: auto;
+
+  padding:
+    15px 25px;
+
+  display: grid;
+
+  place-items: center;
+
+  background: #020b15;
+}
+
+
+.proof-viewer img {
+  max-width: 100%;
+
+  max-height: 60vh;
+
+  object-fit: contain;
+}
+
+
+.proof-viewer iframe {
+  width: 100%;
+
+  height: 60vh;
+
+  border: 0;
+}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.footer {
+  margin-top: 20px;
+
+  border-top:
+    1px solid rgba(76, 132, 190, 0.23);
+
+  background: #020b17;
+}
+
+
+.footer-inner {
+  max-width: 1180px;
+
+  margin: auto;
+
+  padding:
+    38px 28px 30px;
+
+  display: grid;
+
+  grid-template-columns:
+    1.5fr
+    0.8fr
+    1fr
+    1.2fr;
+
+  gap: 45px;
+}
+
+
+.footer-brand p {
+  max-width: 280px;
+
+  color: var(--muted);
+
+  font-size: 13px;
+
+  line-height: 1.6;
+}
+
+
+.footer h4 {
+  margin:
+    4px 0 14px;
+
+  font-size: 14px;
+}
+
+
+.footer-inner > div:not(.footer-brand) {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-start;
+
+  gap: 9px;
+}
+
+
+.footer button {
+  border: 0;
+
+  padding: 0;
+
+  background: transparent;
+
+  color: #aabbd0;
+}
+
+
+.footer button:hover {
+  color: #39a9ff;
+}
+
+
+.footer p {
+  color: #aabbd0;
+
+  font-size: 12px;
+
+  margin: 0;
+}
+
+
+.footer p svg {
+  color: var(--blue);
+
+  margin-right: 7px;
+
+  vertical-align: middle;
+}
+
+
+/* =========================================================
+   SOCIAL ICONS
+   ========================================================= */
+
+.social-icons {
+  display: flex;
+
+  gap: 9px;
+
+  margin-top: 15px;
+}
+
+
+.social-icons span {
+  width: 30px;
+  height: 30px;
+
+  display: grid;
+
+  place-items: center;
+
+  border-radius: 50%;
+
+  color: #e6f4ff;
+
+  background: #122c44;
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   FOOTER BOTTOM
+   ========================================================= */
+
+.footer-bottom {
+  padding:
+    11px 20px;
+
+  text-align: center;
+
+  border-top:
+    1px solid rgba(76, 132, 190, 0.16);
+
+  color: #71879d;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   RESPONSIVE - TABLET
+   ========================================================= */
+
+@media (max-width: 1000px) {
+
+  /* HERO */
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-copy {
+    padding-bottom: 20px;
+  }
+
+  .hero-flyer-side {
+    padding:
+      20px 65px 55px;
+  }
+
+
+  /* EVENT CARD */
+
+  .event-row {
+    grid-template-columns:
+      210px
+      minmax(0, 1fr);
+  }
+
+  .event-poster {
+    width: 210px;
+
+    min-width: 210px;
+
+    min-height: 257px;
+  }
+
+  .event-actions {
+    grid-column:
+      1 / -1;
+
+    flex-direction: row;
+
+    padding:
+      0 20px 20px;
+  }
+
+  .event-actions button {
+    flex: 1;
+  }
+}
+
+
+/* =========================================================
+   RESPONSIVE - MOBILE
+   ========================================================= */
+
+@media (max-width: 720px) {
+
+  /* HEADER */
+
+  .topbar {
+    height: 68px;
+  }
+
+  .nav-inner {
+    padding: 0 15px;
+  }
+
+  .main-nav {
+    display: none;
+
+    position: absolute;
+
+    top: 68px;
+
+    left: 12px;
+    right: 12px;
+
+    height: auto;
+
+    padding: 8px;
+
+    border:
+      1px solid var(--line);
+
+    border-radius: 8px;
+
+    background: #041426;
+
+    box-shadow: var(--shadow);
+
+    flex-direction: column;
+
+    gap: 0;
+  }
+
+  .main-nav.open {
+    display: flex;
+  }
+
+  .main-nav button {
+    width: 100%;
+
+    height: 45px;
+
+    border: 0;
+  }
+
+  .main-nav button.active {
+    background:
+      rgba(0, 115, 255, 0.12);
+  }
+
+  .admin-login {
+    display: none;
+  }
+
+  .mobile-menu {
+    display: grid;
+  }
+
+
+  /* BRAND */
+
+  .brand strong {
+    font-size: 20px;
+  }
+
+  .brand small {
+    font-size: 9px;
+  }
+
+
+  /* HERO */
+
+  .hero {
+    width:
+      calc(100% - 24px);
+
+    margin-top: 12px;
+  }
+
+  .hero-copy {
+    padding:
+      33px 23px 25px;
+  }
+
+  .hero-copy h1 {
+    font-size: 44px;
+
+    letter-spacing: -1.5px;
+  }
+
+  .hero-copy > p:not(.eyebrow) {
+    font-size: 17px;
+  }
+
+  .feature-row {
+    grid-template-columns: 1fr;
+
+    margin-top: 28px;
+  }
+
+  .hero-flyer-side {
+    padding:
+      15px 48px 50px;
+  }
+
+  .flyer-frame {
+    width:
+      min(
+        350px,
+        100%
+      );
+  }
+
+  .slider-arrow.left {
+    left: -43px;
+  }
+
+  .slider-arrow.right {
+    right: -43px;
+  }
+
+
+  /* PAGE */
+
+  .page-section {
+    width:
+      calc(100% - 30px);
+
+    padding:
+      37px 0;
+  }
+
+
+  /* SECTION HEADINGS */
+
+  .section-heading {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .section-heading h2 {
+    font-size: 29px;
+  }
+
+
+  /* SEARCH */
+
+  .search-box {
+    width: 100%;
+  }
+
+
+  /* EVENT CARD */
+
+  .event-row {
+    display: flex;
+
+    flex-direction: column;
+
+    width: 100%;
+  }
+
+  .event-poster {
+    width: 100%;
+
+    min-width: 0;
+
+    height: auto;
+
+    min-height: 0;
+
+    aspect-ratio: 0.72;
+  }
+
+  .event-poster img {
+    width: 100%;
+
+    height: 100%;
+
+    object-fit: cover;
+  }
+
+  .event-info {
+    width: 100%;
+
+    padding:
+      22px;
+  }
+
+  .event-info h3 {
+    font-size: 19px;
+  }
+
+  .event-info > p {
+    max-width: none;
+
+    font-size: 14px;
+  }
+
+  .event-actions {
+    width: 100%;
+
+    padding:
+      0 22px 22px;
+
+    flex-direction: column;
+  }
+
+  .event-actions button {
+    width: 100%;
+
+    flex: none;
+  }
+
+
+  /* FOOTER */
+
+  .footer-inner {
+    grid-template-columns: 1fr;
+
+    gap: 30px;
+  }
+
+
+  /* MODALS */
+
+  .modal-backdrop {
+    padding: 10px;
+
+    align-items: center;
+  }
+
+  .modal-card {
+    width: 100%;
+
+    max-height:
+      calc(100vh - 20px);
+  }
+
+  .modal-scroll {
+    padding:
+      30px 20px 20px;
+
+    overflow-y: auto;
+  }
+
+  .modal-actions {
+    padding:
+      12px 15px 15px;
+  }
+
+
+  /* ADMIN */
+
+  .admin-event {
+    grid-template-columns:
+      58px
+      minmax(0, 1fr);
+  }
+
+  .admin-actions {
+    grid-column:
+      1 / -1;
+  }
+
+  .admin-actions button {
+    flex: 1;
+  }
+
+  .admin-card-title {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+}
+
+
+/* =========================================================
+   VERY SMALL SCREENS
+   ========================================================= */
+
+@media (max-width: 450px) {
+
+  .hero-copy h1 {
+    font-size: 38px;
+  }
+
+  .hero-flyer-side {
+    padding:
+      15px 35px 50px;
+  }
+
+  .slider-arrow.left {
+    left: -31px;
+  }
+
+  .slider-arrow.right {
+    right: -31px;
+  }
+
+  .event-meta {
+    flex-direction: column;
+
+    gap: 9px;
+  }
+
+  .modal-scroll h2 {
+    font-size: 27px;
+  }
+}
+
+
+/* =========================================================
+   PRINT
+   ========================================================= */
+
+@media print {
+
+  body {
+    background: white !important;
+
+    color: black !important;
+  }
+
+  .topbar,
+  .footer,
+  .admin-toolbar,
+  .admin-actions,
+  .modal-backdrop {
+    display: none !important;
+  }
+
+  .admin-card {
+    border: 0;
+
+    background: white;
+  }
+
+  th,
+  td {
+    color: black;
+
+    border-color: #ccc;
+  }
+}
