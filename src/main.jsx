@@ -1,37 +1,37 @@
+import About from "./pages/About";
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { supabase } from "./supabase";
 import "./styles.css";
+
+import eventraLogo from "./assets/eventra.png";
 
 /*
 ============================================================
  EVENTBOOK
  Premium Navy + Blue Event Booking Application
 
- FEATURES
+ COMPLETE SUPABASE VERSION
+
+ USER FLOW
  -----------------------------------------------------------
- • Home page
- • Portrait event flyer slider
- • View Event
- • Book Now
- • Registration
- • Proof of Payment upload
+ • User registers
+ • User logs in
+ • User books an event
+ • User uploads proof of payment
+ • Registration is saved in Supabase
+
+ ADMIN FLOW
+ -----------------------------------------------------------
+ • Admin logs in
  • Admin dashboard
- • View proof directly in browser
- • Export registrations to CSV
+ • Create events
+ • Upload event flyers
+ • Delete events
+ • View registrations
+ • View proof of payment
+ • Export registrations
  • Print registrations
- • Social media sharing
- • Event creation
- • Event deletion
- • localStorage persistence
-
- MVP NOTE
- -----------------------------------------------------------
- This version stores information in localStorage.
-
- For production:
- - Use a database
- - Use real authentication
- - Store uploaded files on a server/cloud
 ============================================================
 */
 
@@ -39,11 +39,6 @@ import "./styles.css";
 // ============================================================
 // CONFIGURATION
 // ============================================================
-
-const STORAGE = {
-  EVENTS: "eventbook_events",
-  REGISTRATIONS: "eventbook_registrations",
-};
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -59,155 +54,195 @@ const FLYER_TYPES = [
   "image/webp",
 ];
 
-
-// ============================================================
-// INITIAL EVENTS
-// ============================================================
-
-const INITIAL_EVENTS = [
-  {
-    id: "event-1",
-    name: "Tabby Youth Empowerment Event",
-    date: "2026-09-12",
-    time: "10:00 AM",
-    venue: "Cape Town",
-    capacity: 200,
-
-    description:
-      "The Tabby Youth Empowerment Event is designed to inspire, support and empower young people through motivation, networking, skills development and meaningful conversations about their future.",
-
-    paymentInfo:
-      "Please make payment using the official payment details provided by the event organiser.",
-
-    flyer: "",
-  },
-
-  {
-    id: "event-2",
-    name: "Business Networking Day",
-    date: "2026-10-03",
-    time: "09:00 AM",
-    venue: "Cape Town",
-    capacity: 100,
-
-    description:
-      "A networking event bringing entrepreneurs, professionals and business-minded people together to create meaningful connections and explore opportunities.",
-
-    paymentInfo:
-      "Please make payment using the official payment details provided by the event organiser.",
-
-    flyer: "",
-  },
-];
+const STORAGE_BUCKETS = {
+  FLYERS: "event-flyers",
+  PROOFS: "proof-of-payment",
+};
 
 
 // ============================================================
 // UTILITY FUNCTIONS
 // ============================================================
 
-function createId(prefix = "id") {
-  return (
-    prefix +
-    "-" +
-    Date.now() +
-    "-" +
-    Math.random().toString(36).slice(2, 8)
-  );
-}
-
-
-function readStorage(key, fallback) {
-  try {
-    const saved = localStorage.getItem(key);
-
-    return saved
-      ? JSON.parse(saved)
-      : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-
-function writeStorage(key, value) {
-  try {
-    localStorage.setItem(
-      key,
-      JSON.stringify(value)
-    );
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-
 function formatDate(dateString) {
   if (!dateString) return "";
 
-  const date =
-    new Date(`${dateString}T00:00:00`);
+  const date = new Date(`${dateString}T00:00:00`);
 
   if (Number.isNaN(date.getTime())) {
     return dateString;
   }
 
-  return date.toLocaleDateString(
-    "en-ZA",
-    {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }
-  );
-}
-
-
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = () =>
-      resolve(reader.result);
-
-    reader.onerror = () =>
-      reject(
-        new Error("Could not read file")
-      );
-
-    reader.readAsDataURL(file);
+  return date.toLocaleDateString("en-ZA", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 }
 
 
 function csvValue(value) {
-  return `"${String(value ?? "")
-    .replaceAll('"', '""')}"`;
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
 
 
 function downloadCSV(filename, content) {
-  const blob = new Blob(
-    [content],
-    {
-      type:
-        "text/csv;charset=utf-8;",
-    }
-  );
+  const blob = new Blob([content], {
+    type: "text/csv;charset=utf-8;",
+  });
 
-  const url =
-    URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
 
-  const link =
-    document.createElement("a");
+  const link = document.createElement("a");
 
   link.href = url;
   link.download = filename;
 
   document.body.appendChild(link);
+
   link.click();
+
   document.body.removeChild(link);
 
   URL.revokeObjectURL(url);
+}
+
+
+// ============================================================
+// STORAGE
+// ============================================================
+
+async function uploadFile(bucket, file) {
+  if (!file) {
+    throw new Error("No file selected.");
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error(
+      "You must be logged in before uploading."
+    );
+  }
+
+  const safeFileName =
+    (file.name || "proof")
+      .replace(
+        /[^a-zA-Z0-9._-]/g,
+        "_"
+      );
+
+  const storagePath =
+    `${user.id}/${Date.now()}-${safeFileName}`;
+
+  const {
+    error,
+  } = await supabase.storage
+    .from(bucket)
+    .upload(
+      storagePath,
+      file,
+      {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type,
+      }
+    );
+
+  if (error) {
+    console.error(
+      "STORAGE UPLOAD ERROR:",
+      error
+    );
+
+    throw error;
+  }
+
+  return storagePath;
+}
+
+
+async function uploadFlyer(file, eventId) {
+  if (!file) return "";
+
+  if (!FLYER_TYPES.includes(file.type)) {
+    throw new Error(
+      "Flyer must be JPG, PNG or WEBP."
+    );
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(
+      "Flyer must be 5 MB or smaller."
+    );
+  }
+
+  const safeFileName = file.name.replace(
+    /[^a-zA-Z0-9._-]/g,
+    "_"
+  );
+
+  const path =
+    `${eventId}/${Date.now()}-${safeFileName}`;
+
+  const {
+    error,
+  } = await supabase.storage
+    .from(STORAGE_BUCKETS.FLYERS)
+    .upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return path;
+}
+
+
+function getPublicFileUrl(bucket, path) {
+  if (!path) return "";
+
+  const {
+    data,
+  } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(path);
+
+  return data?.publicUrl || "";
+}
+
+
+async function getSignedFileUrl(bucket, path) {
+  if (!path) return "";
+
+  const {
+    data,
+    error,
+  } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, 60 * 60);
+
+  if (error) {
+    console.error(
+      "SIGNED URL ERROR:",
+      error
+    );
+
+    return "";
+  }
+
+  return data?.signedUrl || "";
 }
 
 
@@ -220,7 +255,7 @@ async function shareEvent(event) {
     `${window.location.origin}${window.location.pathname}?event=${event.id}`;
 
   const text =
-    `${event.name} — ${formatDate(event.date)} — ${event.venue}`;
+    `${event.name} — ${formatDate(event.date)} — ${event.venue || event.location || ""}`;
 
   try {
     if (navigator.share) {
@@ -240,7 +275,6 @@ async function shareEvent(event) {
     alert(
       "Event link copied to clipboard."
     );
-
   } catch {
     // User cancelled sharing.
   }
@@ -252,7 +286,7 @@ function socialShare(platform, event) {
     `${window.location.origin}${window.location.pathname}?event=${event.id}`;
 
   const text =
-    `${event.name} — ${formatDate(event.date)} — ${event.venue}`;
+    `${event.name} — ${formatDate(event.date)} — ${event.venue || event.location || ""}`;
 
   const links = {
     whatsapp:
@@ -287,11 +321,10 @@ function socialShare(platform, event) {
 
 
 // ============================================================
-// ICON COMPONENT
+// ICON
 // ============================================================
 
 function Icon({ name, size = 20 }) {
-
   const props = {
     width: size,
     height: size,
@@ -304,18 +337,10 @@ function Icon({ name, size = 20 }) {
     "aria-hidden": true,
   };
 
-
   const icons = {
-
     calendar: (
       <>
-        <rect
-          x="3"
-          y="4"
-          width="18"
-          height="17"
-          rx="2"
-        />
+        <rect x="3" y="4" width="18" height="17" rx="2" />
         <path d="M8 2v4" />
         <path d="M16 2v4" />
         <path d="M3 9h18" />
@@ -325,11 +350,7 @@ function Icon({ name, size = 20 }) {
 
     user: (
       <>
-        <circle
-          cx="12"
-          cy="7"
-          r="3.5"
-        />
+        <circle cx="12" cy="7" r="3.5" />
         <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
       </>
     ),
@@ -374,11 +395,7 @@ function Icon({ name, size = 20 }) {
 
     search: (
       <>
-        <circle
-          cx="10.8"
-          cy="10.8"
-          r="6.8"
-        />
+        <circle cx="10.8" cy="10.8" r="6.8" />
         <path d="m16 16 5 5" />
       </>
     ),
@@ -386,21 +403,13 @@ function Icon({ name, size = 20 }) {
     pin: (
       <>
         <path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" />
-        <circle
-          cx="12"
-          cy="10"
-          r="2.3"
-        />
+        <circle cx="12" cy="10" r="2.3" />
       </>
     ),
 
     clock: (
       <>
-        <circle
-          cx="12"
-          cy="12"
-          r="9"
-        />
+        <circle cx="12" cy="12" r="9" />
         <path d="M12 7v5l3 2" />
       </>
     ),
@@ -412,13 +421,9 @@ function Icon({ name, size = 20 }) {
       </>
     ),
 
-    left: (
-      <path d="m15 18-6-6 6-6" />
-    ),
+    left: <path d="m15 18-6-6 6-6" />,
 
-    right: (
-      <path d="m9 18 6-6-6-6" />
-    ),
+    right: <path d="m9 18 6-6-6-6" />,
 
     close: (
       <>
@@ -456,18 +461,11 @@ function Icon({ name, size = 20 }) {
 
     mail: (
       <>
-        <rect
-          x="3"
-          y="5"
-          width="18"
-          height="14"
-          rx="2"
-        />
+        <rect x="3" y="5" width="18" height="14" rx="2" />
         <path d="m4 7 8 6 8-6" />
       </>
     ),
   };
-
 
   return (
     <svg {...props}>
@@ -482,149 +480,264 @@ function Icon({ name, size = 20 }) {
 // ============================================================
 
 function App() {
+  const [page, setPage] = useState("home");
 
-  const [page, setPage] =
-    useState("home");
+  const [events, setEvents] = useState([]);
 
-  const [events, setEvents] =
-    useState(() =>
-      readStorage(
-        STORAGE.EVENTS,
-        INITIAL_EVENTS
-      )
-    );
+  const [registrations, setRegistrations] = useState([]);
 
-  const [registrations, setRegistrations] =
-    useState(() =>
-      readStorage(
-        STORAGE.REGISTRATIONS,
-        []
-      )
-    );
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
-  const [detailsEvent, setDetailsEvent] =
-    useState(null);
+  const [
+    loadingRegistrations,
+    setLoadingRegistrations,
+  ] = useState(false);
 
-  const [bookingEvent, setBookingEvent] =
-    useState(null);
+  const [detailsEvent, setDetailsEvent] = useState(null);
 
-  const [proof, setProof] =
-    useState(null);
+  const [bookingEvent, setBookingEvent] = useState(null);
 
-  const [createOpen, setCreateOpen] =
-    useState(false);
+  const [proof, setProof] = useState(null);
 
-  const [admin, setAdmin] =
-    useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
-  const [search, setSearch] =
-    useState("");
+  const [authOpen, setAuthOpen] = useState(false);
 
-  const [mobileMenu, setMobileMenu] =
-    useState(false);
+  const [authMode, setAuthMode] = useState("login");
+
+  const [admin, setAdmin] = useState(false);
+
+  const [user, setUser] = useState(null);
+
+  const [search, setSearch] = useState("");
+
+  const [mobileMenu, setMobileMenu] = useState(false);
 
 
-  // ----------------------------------------------------------
-  // SAVE EVENTS
-  // ----------------------------------------------------------
+  // ==========================================================
+  // CHECK AUTHENTICATION
+  // ==========================================================
 
   useEffect(() => {
-    writeStorage(
-      STORAGE.EVENTS,
-      events
-    );
-  }, [events]);
+    let mounted = true;
 
+    async function checkSession() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-  // ----------------------------------------------------------
-  // SAVE REGISTRATIONS
-  // ----------------------------------------------------------
+      if (!mounted) return;
 
-  useEffect(() => {
-    writeStorage(
-      STORAGE.REGISTRATIONS,
-      registrations
-    );
-  }, [registrations]);
+      if (session?.user) {
+        setUser(session.user);
 
-
-  // ----------------------------------------------------------
-  // OPEN EVENT FROM SHARED URL
-  // ----------------------------------------------------------
-
-  useEffect(() => {
-
-    const id =
-      new URLSearchParams(
-        window.location.search
-      ).get("event");
-
-    if (!id) return;
-
-    const event =
-      events.find(
-        item => item.id === id
-      );
-
-    if (event) {
-      setDetailsEvent(event);
+        await checkAdmin(session.user.id);
+      } else {
+        setUser(null);
+        setAdmin(false);
+      }
     }
 
-  }, [events]);
+    async function checkAdmin(userId) {
+      const {
+        data: profile,
+        error,
+      } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .maybeSingle();
 
+      if (!mounted) return;
 
-  // ----------------------------------------------------------
-  // REGISTRATION COUNTS
-  // ----------------------------------------------------------
+      if (!error && profile?.role === "admin") {
+        setAdmin(true);
+      } else {
+        setAdmin(false);
+      }
+    }
 
-  const counts = useMemo(() => {
+    checkSession();
 
-    const result = {};
+    const {
+      data: listener,
+    } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (!mounted) return;
 
-    registrations.forEach(
-      registration => {
-
-        result[
-          registration.eventId
-        ] =
-          (
-            result[
-              registration.eventId
-            ] || 0
-          ) +
-          Number(
-            registration.quantity || 1
-          );
-
+        if (session?.user) {
+          setUser(session.user);
+          await checkAdmin(session.user.id);
+        } else {
+          setUser(null);
+          setAdmin(false);
+        }
       }
     );
 
-    return result;
+    return () => {
+      mounted = false;
+      listener?.subscription?.unsubscribe();
+    };
+  }, []);
 
-  }, [registrations]);
 
+  // ==========================================================
+  // LOAD EVENTS
+  // ==========================================================
 
-  // ----------------------------------------------------------
-  // REMAINING PLACES
-  // ----------------------------------------------------------
+  async function loadEvents() {
+    setLoadingEvents(true);
 
-  function remaining(event) {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("events")
+      .select("*")
+      .order("date", {
+        ascending: true,
+      });
 
-    return Math.max(
-      0,
-      Number(event.capacity) -
-      (counts[event.id] || 0)
-    );
+    if (error) {
+      console.error(
+        "SUPABASE EVENTS ERROR:",
+        error
+      );
 
+      alert(
+        `Could not load events.\n\n${error.message}`
+      );
+
+      setEvents([]);
+      setLoadingEvents(false);
+      return;
+    }
+
+    const formattedEvents =
+      (data || []).map((event) => {
+        const flyerPath =
+          event.flyer_path ||
+          "";
+
+        const flyer =
+          event.flyer_url ||
+          event.flyer ||
+          (flyerPath
+            ? getPublicFileUrl(
+                STORAGE_BUCKETS.FLYERS,
+                flyerPath
+              )
+            : "");
+
+        return {
+          ...event,
+          flyer,
+          flyer_url: flyer,
+          venue:
+            event.venue ||
+            event.location ||
+            "",
+          location:
+            event.location ||
+            event.venue ||
+            "",
+        };
+      });
+
+    setEvents(formattedEvents);
+
+    setLoadingEvents(false);
   }
 
 
-  // ----------------------------------------------------------
-  // PAGE NAVIGATION
-  // ----------------------------------------------------------
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+
+  // ==========================================================
+  // LOAD REGISTRATIONS
+  // ==========================================================
+
+  async function loadRegistrations() {
+  setLoadingRegistrations(true);
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("registrations")
+    .select("*")
+    .order("created_at", {
+      ascending: false,
+    });
+
+  if (error) {
+    console.error(
+      "SUPABASE REGISTRATIONS ERROR:",
+      error
+    );
+
+    setRegistrations([]);
+    setLoadingRegistrations(false);
+    return;
+  }
+
+  const formatted =
+    await Promise.all(
+      (data || []).map(
+        async registration => {
+
+          let proofUrl = "";
+
+          if (registration.proof_url) {
+            proofUrl =
+              await getSignedFileUrl(
+                STORAGE_BUCKETS.PROOFS,
+                registration.proof_url
+              );
+          }
+
+          return {
+            ...registration,
+
+            eventId:
+              registration.event_id,
+
+            fullName:
+              registration.full_name,
+
+            paymentReference:
+              registration.payment_reference,
+
+            proofFileName:
+              registration.proof_file_name,
+
+            proofFileType:
+              registration.proof_file_type,
+
+            proofData:
+              proofUrl,
+
+            registeredAt:
+              registration.created_at,
+          };
+        }
+      )
+    );
+
+  setRegistrations(formatted);
+
+  setLoadingRegistrations(false);
+}
+
+
+  // ==========================================================
+  // NAVIGATION
+  // ==========================================================
 
   function goTo(pageName) {
-
     setPage(pageName);
 
     setMobileMenu(false);
@@ -634,6 +747,45 @@ function App() {
       behavior: "smooth",
     });
 
+    if (
+      pageName === "admin" &&
+      admin
+    ) {
+      loadRegistrations();
+    }
+  }
+
+
+  // ==========================================================
+  // USER AUTH
+  // ==========================================================
+
+  function requireLoginForBooking(event) {
+    if (user) {
+      setBookingEvent(event);
+      return;
+    }
+
+    setAuthMode("register");
+    setAuthOpen(true);
+  }
+
+
+  // ==========================================================
+  // AUTH SUCCESS
+  // ==========================================================
+
+  function handleAuthSuccess() {
+    setAuthOpen(false);
+
+    /*
+    If the user originally wanted to book,
+    the booking event remains available here.
+    */
+
+    if (bookingEvent) {
+      return;
+    }
   }
 
 
@@ -641,31 +793,61 @@ function App() {
   // ADMIN LOGIN
   // ==========================================================
 
-  function adminLogin() {
+  async function adminLogin() {
+    setAuthMode("admin");
+    setAuthOpen(true);
+  }
 
-    const password =
-      window.prompt(
-        "Enter admin password:"
-      );
 
-    if (
-      password === "admin123"
-    ) {
+  // ==========================================================
+  // ADMIN LOGOUT
+  // ==========================================================
 
-      setAdmin(true);
+  async function logout() {
+    await supabase.auth.signOut();
 
-      goTo("admin");
+    setUser(null);
+    setAdmin(false);
 
-    } else if (
-      password !== null
-    ) {
+    setPage("home");
+  }
 
-      alert(
-        "Incorrect password."
-      );
 
-    }
+  // ==========================================================
+  // REGISTRATION COUNTS
+  // ==========================================================
 
+  const counts = useMemo(() => {
+    const result = {};
+
+    registrations.forEach(
+      (registration) => {
+        const eventId =
+          registration.event_id ||
+          registration.eventId;
+
+        result[eventId] =
+          (result[eventId] || 0) +
+          Number(
+            registration.quantity || 1
+          );
+      }
+    );
+
+    return result;
+  }, [registrations]);
+
+
+  // ==========================================================
+  // REMAINING PLACES
+  // ==========================================================
+
+  function remaining(event) {
+    return Math.max(
+      0,
+      Number(event.capacity || 0) -
+        (counts[event.id] || 0)
+    );
   }
 
 
@@ -674,75 +856,140 @@ function App() {
   // ==========================================================
 
   async function createEvent(data) {
+    try {
+      if (!admin) {
+        alert(
+          "Administrator access is required."
+        );
 
-    const event = {
-
-      ...data,
-
-      id:
-        createId("event"),
-
-      capacity:
-        Number(data.capacity),
-
-      flyer:
-        "",
-
-    };
-
-
-    if (data.flyerFile) {
+        return;
+      }
 
       if (
+        data.flyerFile &&
         !FLYER_TYPES.includes(
           data.flyerFile.type
         )
       ) {
-
         alert(
           "Flyer must be JPG, PNG or WEBP."
         );
 
         return;
-
       }
 
-
       if (
+        data.flyerFile &&
         data.flyerFile.size >
-        MAX_FILE_SIZE
+          MAX_FILE_SIZE
       ) {
-
         alert(
           "Flyer must be 5 MB or smaller."
         );
 
         return;
-
       }
 
+      const eventId =
+        crypto.randomUUID();
 
-      event.flyer =
-        await fileToDataUrl(
-          data.flyerFile
-        );
+      let flyerPath = "";
 
-    }
+      if (data.flyerFile) {
+        flyerPath =
+          await uploadFlyer(
+            data.flyerFile,
+            eventId
+          );
+      }
 
+      const event = {
+        id: eventId,
 
-    delete event.flyerFile;
+        name:
+          data.name.trim(),
 
+        date:
+          data.date,
 
-    setEvents(
-      old => [
-        event,
+        time:
+          data.time.trim(),
+
+        venue:
+          data.venue.trim(),
+
+        location:
+          data.venue.trim(),
+
+        capacity:
+          Number(data.capacity),
+
+        description:
+          data.description.trim(),
+
+        payment_info:
+          data.paymentInfo?.trim() || "",
+
+        flyer_path:
+          flyerPath || null,
+      };
+
+      const {
+        data: insertedEvent,
+        error,
+      } = await supabase
+        .from("events")
+        .insert([event])
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      const formattedEvent = {
+        ...insertedEvent,
+
+        flyer:
+          flyerPath
+            ? getPublicFileUrl(
+                STORAGE_BUCKETS.FLYERS,
+                flyerPath
+              )
+            : "",
+
+        flyer_url:
+          flyerPath
+            ? getPublicFileUrl(
+                STORAGE_BUCKETS.FLYERS,
+                flyerPath
+              )
+            : "",
+      };
+
+      setEvents((old) => [
         ...old,
-      ]
-    );
+        formattedEvent,
+      ]);
 
+      setCreateOpen(false);
 
-    setCreateOpen(false);
+      alert(
+        "Event created successfully."
+      );
 
+    } catch (error) {
+      console.error(
+        "CREATE EVENT ERROR:",
+        error
+      );
+
+      alert(
+        `Could not create event.\n\n${
+          error.message || error
+        }`
+      );
+    }
   }
 
 
@@ -751,180 +998,304 @@ function App() {
   // ==========================================================
 
   async function bookEvent(data) {
+  if (!bookingEvent) return;
 
-    if (!bookingEvent) return;
+  try {
+    // ========================================================
+    // 1. GET LOGGED-IN USER
+    // ========================================================
 
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    const quantity =
-      Number(data.quantity);
+    if (userError) {
+      console.error("GET USER ERROR:", userError);
+      alert("Could not verify your account.");
+      return;
+    }
 
-    const available =
-      remaining(
-        bookingEvent
-      );
+    if (!user) {
+      alert("Please log in before booking an event.");
+      return;
+    }
 
+    // ========================================================
+    // 2. CHECK AVAILABLE PLACES
+    // ========================================================
+
+    const quantity = Number(data.quantity);
+
+    const available = remaining(bookingEvent);
 
     if (
       !Number.isInteger(quantity) ||
       quantity < 1 ||
       quantity > available
     ) {
-
-      alert(
-        `Only ${available} place(s) remain.`
-      );
-
+      alert(`Only ${available} place(s) remain.`);
       return;
-
     }
 
+    // ========================================================
+    // 3. VALIDATE PROOF OF PAYMENT
+    // ========================================================
 
     if (!data.proofFile) {
-
-      alert(
-        "Please upload proof of payment."
-      );
-
+      alert("Please upload proof of payment.");
       return;
-
     }
 
-
-    if (
-      !PROOF_TYPES.includes(
-        data.proofFile.type
-      )
-    ) {
-
-      alert(
-        "Proof must be PDF, JPG, JPEG or PNG."
-      );
-
+    if (!PROOF_TYPES.includes(data.proofFile.type)) {
+      alert("Proof must be PDF, JPG, JPEG or PNG.");
       return;
-
     }
 
-
-    if (
-      data.proofFile.size >
-      MAX_FILE_SIZE
-    ) {
-
-      alert(
-        "Proof must be 5 MB or smaller."
-      );
-
+    if (data.proofFile.size > MAX_FILE_SIZE) {
+      alert("Proof must be 5 MB or smaller.");
       return;
-
     }
 
+    // ========================================================
+    // 4. UPLOAD PROOF TO SUPABASE STORAGE
+    // ========================================================
 
-    const proofData =
-      await fileToDataUrl(
-        data.proofFile
-      );
+    console.log("Uploading proof of payment...");
 
+    const proofPath = await uploadFile(
+      STORAGE_BUCKETS.PROOFS,
+      data.proofFile
+    );
+
+    console.log("PROOF UPLOADED:", proofPath);
+
+    // ========================================================
+    // 5. CREATE REGISTRATION RECORD
+    // ========================================================
 
     const registration = {
+      user_id: user.id,
 
-      id:
-        createId(
-          "registration"
-        ),
+      event_id: bookingEvent.id,
+
+      full_name: data.name.trim(),
+
+      phone: data.phone.trim(),
+
+      email: data.email.trim(),
+
+      quantity: quantity,
+
+      payment_reference:
+        data.paymentReference.trim(),
+
+      proof_url: proofPath,
+
+      proof_file_name:
+        data.proofFile.name,
+
+      proof_file_type:
+        data.proofFile.type,
+    };
+
+    console.log(
+      "CREATING REGISTRATION:",
+      registration
+    );
+
+    // ========================================================
+    // 6. INSERT INTO SUPABASE
+    // ========================================================
+
+    const {
+      data: savedRegistration,
+      error,
+    } = await supabase
+      .from("registrations")
+      .insert([registration])
+      .select()
+      .single();
+
+    if (error) {
+      console.error(
+        "REGISTRATION ERROR:",
+        error
+      );
+
+      alert(
+        `Registration could not be completed.\n\n${error.message}`
+      );
+
+      return;
+    }
+
+    console.log(
+      "REGISTRATION SAVED:",
+      savedRegistration
+    );
+
+
+    // ========================================================
+    // 7. GET SECURE SIGNED URL FOR ADMIN VIEWING
+    // ========================================================
+
+    let proofUrl = "";
+
+    if (savedRegistration.proof_path) {
+      proofUrl =
+        await getSignedFileUrl(
+          STORAGE_BUCKETS.PROOFS,
+          savedRegistration.proof_path
+        );
+    }
+
+    // ========================================================
+    // 8. CREATE DISPLAY REGISTRATION
+    // ========================================================
+
+    const displayRegistration = {
+      ...savedRegistration,
 
       eventId:
-        bookingEvent.id,
+        savedRegistration.event_id,
 
       eventName:
         bookingEvent.name,
 
       fullName:
-        data.name.trim(),
+        savedRegistration.full_name,
 
       phone:
-        data.phone.trim(),
+        savedRegistration.phone,
 
       email:
-        data.email.trim(),
-
-      quantity,
+        savedRegistration.email,
 
       paymentReference:
-        data.paymentReference.trim(),
+        savedRegistration.payment_reference,
 
       proofFileName:
-        data.proofFile.name,
+        savedRegistration.proof_file_name,
 
       proofFileType:
-        data.proofFile.type,
+        savedRegistration.proof_file_type,
 
-      proofData,
+      proofData:
+        proofUrl,
 
       registeredAt:
-        new Date().toISOString(),
-
+        savedRegistration.created_at,
     };
 
+    // ========================================================
+    // 9. UPDATE ADMIN REGISTRATION LIST
+    // ========================================================
 
     setRegistrations(
       old => [
+        displayRegistration,
         ...old,
-        registration,
       ]
     );
 
+    // ========================================================
+    // 10. CLOSE BOOKING MODAL
+    // ========================================================
 
     setBookingEvent(null);
 
+    // ========================================================
+    // 11. SUCCESS
+    // ========================================================
 
     alert(
-      "Registration completed successfully."
+      "Booking completed successfully!"
     );
 
-  }
+  } catch (error) {
 
+    console.error(
+      "BOOKING FAILED:",
+      error
+    );
+
+    alert(
+      `Registration could not be completed.\n\n${
+        error?.message || error
+      }`
+    );
+  }
+}
 
   // ==========================================================
   // DELETE EVENT
   // ==========================================================
 
-  function deleteEvent(id) {
-
+  async function deleteEvent(id) {
     const event =
       events.find(
-        item => item.id === id
+        (item) =>
+          item.id === id
       );
 
     if (!event) return;
-
 
     if (
       !window.confirm(
         `Delete "${event.name}"?`
       )
     ) {
-
       return;
-
     }
 
+    try {
+      const {
+        error,
+      } = await supabase
+        .from("events")
+        .delete()
+        .eq("id", id);
 
-    setEvents(
-      old =>
-        old.filter(
-          item => item.id !== id
-        )
-    );
+      if (error) {
+        throw error;
+      }
 
+      setEvents(
+        (old) =>
+          old.filter(
+            (item) =>
+              item.id !== id
+          )
+      );
 
-    setRegistrations(
-      old =>
-        old.filter(
-          item =>
-            item.eventId !== id
-        )
-    );
+      setRegistrations(
+        (old) =>
+          old.filter(
+            (item) =>
+              (
+                item.event_id ||
+                item.eventId
+              ) !== id
+          )
+      );
 
+      alert(
+        "Event deleted successfully."
+      );
+
+    } catch (error) {
+      console.error(
+        "DELETE EVENT ERROR:",
+        error
+      );
+
+      alert(
+        `Could not delete event.\n\n${
+          error.message || error
+        }`
+      );
+    }
   }
 
 
@@ -933,48 +1304,35 @@ function App() {
   // ==========================================================
 
   function exportRegistrations() {
-
     if (
       registrations.length === 0
     ) {
-
       alert(
         "There are no registrations."
       );
 
       return;
-
     }
 
-
     const headers = [
-
       "Event",
-
       "Full Name",
-
       "Phone",
-
       "Email",
-
       "Number of People",
-
       "Payment Reference",
-
       "Proof File",
-
       "Registration Date",
-
     ];
-
 
     const rows =
       registrations.map(
-        r => [
+        (r) => [
+          r.event_name ||
+            r.eventName,
 
-          r.eventName,
-
-          r.fullName,
+          r.full_name ||
+            r.fullName,
 
           r.phone,
 
@@ -982,41 +1340,38 @@ function App() {
 
           r.quantity,
 
-          r.paymentReference,
+          r.payment_reference ||
+            r.paymentReference,
 
-          r.proofFileName,
+          r.proof_file_name ||
+            r.proofFileName,
 
           new Date(
-            r.registeredAt
+            r.created_at ||
+              r.registeredAt
           ).toLocaleString(
             "en-ZA"
           ),
-
         ]
       );
 
-
     const csv = [
-
       headers
         .map(csvValue)
         .join(","),
 
       ...rows.map(
-        row =>
+        (row) =>
           row
             .map(csvValue)
             .join(",")
       ),
-
     ].join("\n");
-
 
     downloadCSV(
       "eventbook-registrations.csv",
       csv
     );
-
   }
 
 
@@ -1026,29 +1381,31 @@ function App() {
 
   const filteredEvents =
     useMemo(() => {
-
       const term =
         search
           .trim()
           .toLowerCase();
 
-
       if (!term) {
         return events;
       }
 
-
       return events.filter(
-        event =>
-          event.name
+        (event) =>
+          String(
+            event.name || ""
+          )
             .toLowerCase()
             .includes(term) ||
 
-          event.venue
+          String(
+            event.venue ||
+              event.location ||
+              ""
+          )
             .toLowerCase()
             .includes(term)
       );
-
     }, [
       events,
       search,
@@ -1056,51 +1413,56 @@ function App() {
 
 
   // ==========================================================
+  // SHARED EVENT URL
+  // ==========================================================
+
+  useEffect(() => {
+    const id =
+      new URLSearchParams(
+        window.location.search
+      ).get("event");
+
+    if (!id) return;
+
+    const event =
+      events.find(
+        (item) =>
+          item.id === id
+      );
+
+    if (event) {
+      setDetailsEvent(event);
+    }
+  }, [events]);
+
+
+  // ==========================================================
   // RENDER
   // ==========================================================
 
   return (
-
     <div className="app">
 
-      {/* HEADER */}
+      {/* ====================================================
+          HEADER
+      ==================================================== */}
 
       <header className="topbar">
 
         <div className="nav-inner">
 
-          <button
-            className="brand"
-            onClick={() =>
-              goTo("home")
-            }
-          >
-
-            <span className="brand-icon">
-
-              <Icon
-                name="calendar"
-                size={31}
-              />
-
-            </span>
-
-
             <span>
-
-              <strong>
-                Event<span>Book</span>
-              </strong>
-
-              <small>
-                Simple event registration
-              </small>
+              <a className="brand" href="#">
+  <img
+    src={eventraLogo}
+    alt="Eventra"
+    className="brand-logo"
+  />
+</a>
 
             </span>
 
-          </button>
-
-
+       
           <nav
             className={
               mobileMenu
@@ -1110,18 +1472,18 @@ function App() {
           >
 
             <button
-              className={
-                page === "home"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                goTo("home")
-              }
-            >
-              Home
-            </button>
+  className={page === "home" ? "active" : ""}
+  onClick={() => goTo("home")}
+>
+  Home
+</button>
 
+<button
+  className={page === "about" ? "active" : ""}
+  onClick={() => goTo("about")}
+>
+  About
+</button>
 
             <button
               className={
@@ -1180,13 +1542,11 @@ function App() {
             className="mobile-menu"
             onClick={() =>
               setMobileMenu(
-                old => !old
+                (old) => !old
               )
             }
           >
-
             <Icon name="menu" />
-
           </button>
 
         </div>
@@ -1194,40 +1554,35 @@ function App() {
       </header>
 
 
-      {/* MAIN */}
+      {/* ====================================================
+          MAIN
+      ==================================================== */}
 
       <main>
 
-
         {page === "home" && (
-
           <Home
-
             events={events}
-
+            loading={loadingEvents}
             remaining={remaining}
-
-            onView={
-              event =>
-                setDetailsEvent(event)
+            onView={(event) =>
+              setDetailsEvent(event)
             }
-
             onBook={
-              event =>
-                setBookingEvent(event)
+              requireLoginForBooking
             }
-
             onEvents={() =>
               goTo("events")
             }
-
           />
-
         )}
+
+{page === "about" && (
+  <About />
+)}
 
 
         {page === "events" && (
-
           <section className="page-section">
 
             <div className="section-heading">
@@ -1243,8 +1598,9 @@ function App() {
                 </h2>
 
                 <p>
-                  Browse events, view the details
-                  and reserve your place.
+                  Browse events, view the
+                  details and reserve your
+                  place.
                 </p>
 
               </div>
@@ -1255,17 +1611,13 @@ function App() {
                 <Icon name="search" />
 
                 <input
-
                   value={search}
-
-                  onChange={e =>
+                  onChange={(e) =>
                     setSearch(
                       e.target.value
                     )
                   }
-
                   placeholder="Search events..."
-
                 />
 
               </label>
@@ -1273,221 +1625,757 @@ function App() {
             </div>
 
 
-            <EventList
-
-              events={
-                filteredEvents
-              }
-
-              remaining={
-                remaining
-              }
-
-              onView={
-                event =>
+            {loadingEvents ? (
+              <div className="empty-state">
+                Loading events...
+              </div>
+            ) : (
+              <EventList
+                events={
+                  filteredEvents
+                }
+                remaining={
+                  remaining
+                }
+                onView={(event) =>
                   setDetailsEvent(event)
-              }
-
-              onBook={
-                event =>
-                  setBookingEvent(event)
-              }
-
-              onShare={
-                shareEvent
-              }
-
-            />
+                }
+                onBook={
+                  requireLoginForBooking
+                }
+                onShare={
+                  shareEvent
+                }
+              />
+            )}
 
           </section>
-
         )}
 
 
         {page === "admin" &&
           admin && (
-
             <Admin
-
               events={events}
-
               registrations={
                 registrations
               }
-
-              remaining={
-                remaining
+              loadingRegistrations={
+                loadingRegistrations
               }
-
+              remaining={remaining}
               onCreate={() =>
                 setCreateOpen(true)
               }
-
               onDelete={
                 deleteEvent
               }
-
-              onView={
-                event =>
-                  setDetailsEvent(event)
+              onView={(event) =>
+                setDetailsEvent(event)
               }
-
-              onProof={
-                item =>
-                  setProof(item)
+              onProof={(item) =>
+                setProof(item)
               }
-
               onExport={
                 exportRegistrations
               }
-
               onPrint={() =>
                 window.print()
               }
-
-              onLogout={() => {
-
-                setAdmin(false);
-
-                goTo("home");
-
-              }}
-
+              onLogout={
+                logout
+              }
             />
-
           )}
 
       </main>
 
 
-      {/* FOOTER */}
+      {/* ====================================================
+          FOOTER
+      ==================================================== */}
 
       <Footer
-        onNavigate={
-          goTo
-        }
+        onNavigate={goTo}
       />
 
 
-      {/* EVENT DETAILS */}
+      {/* ====================================================
+          EVENT DETAILS
+      ==================================================== */}
 
       {detailsEvent && (
-
         <EventDetails
-
           event={
             detailsEvent
           }
-
           remaining={
             remaining(
               detailsEvent
             )
           }
-
           onClose={() =>
             setDetailsEvent(null)
           }
-
           onBook={() => {
+            const event =
+              detailsEvent;
 
-            setBookingEvent(
-              detailsEvent
+            setDetailsEvent(null);
+
+            requireLoginForBooking(
+              event
             );
-
-            setDetailsEvent(
-              null
-            );
-
           }}
-
           onShare={() =>
             shareEvent(
               detailsEvent
             )
           }
-
-          onSocial={
-            platform =>
-              socialShare(
-                platform,
-                detailsEvent
-              )
-          }
-
-        />
-
-      )}
-
-
-      {/* BOOKING */}
-
-      {bookingEvent && (
-
-        <Booking
-
-          event={
-            bookingEvent
-          }
-
-          remaining={
-            remaining(
-              bookingEvent
+          onSocial={(platform) =>
+            socialShare(
+              platform,
+              detailsEvent
             )
           }
-
-          onClose={() =>
-            setBookingEvent(null)
-          }
-
-          onSubmit={
-            bookEvent
-          }
-
         />
-
       )}
 
 
-      {/* CREATE EVENT */}
+      {/* ====================================================
+          BOOKING
+      ==================================================== */}
+
+      {bookingEvent &&
+        user && (
+          <Booking
+            event={
+              bookingEvent
+            }
+            user={user}
+            remaining={
+              remaining(
+                bookingEvent
+              )
+            }
+            onClose={() =>
+              setBookingEvent(null)
+            }
+            onSubmit={
+              bookEvent
+            }
+          />
+        )}
+
+
+      {/* ====================================================
+          AUTHENTICATION
+      ==================================================== */}
+
+      {authOpen && (
+        <AuthModal
+          mode={authMode}
+          user={user}
+          onClose={() =>
+            setAuthOpen(false)
+          }
+          onSuccess={
+            handleAuthSuccess
+          }
+          onModeChange={
+            setAuthMode
+          }
+          onAdminSuccess={() => {
+            setAdmin(true);
+            setAuthOpen(false);
+            goTo("admin");
+          }}
+        />
+      )}
+
+
+      {/* ====================================================
+          CREATE EVENT
+      ==================================================== */}
 
       {createOpen && (
-
         <CreateEvent
-
           onClose={() =>
             setCreateOpen(false)
           }
-
           onSubmit={
             createEvent
           }
-
         />
-
       )}
 
 
-      {/* PROOF VIEWER */}
+      {/* ====================================================
+          PROOF VIEWER
+      ==================================================== */}
 
       {proof && (
-
         <ProofViewer
-
           registration={
             proof
           }
-
           onClose={() =>
             setProof(null)
           }
-
         />
-
       )}
 
     </div>
+  );
+}
 
+
+// ============================================================
+// AUTH MODAL
+// ============================================================
+
+function AuthModal({
+  mode,
+  user,
+  onClose,
+  onSuccess,
+  onModeChange,
+  onAdminSuccess,
+}) {
+
+  const [
+    form,
+    setForm,
+  ] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    password: "",
+  });
+
+  const [
+    error,
+    setError,
+  ] = useState("");
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
+
+
+  function update(e) {
+    setForm(
+      (old) => ({
+        ...old,
+        [e.target.name]:
+          e.target.value,
+      })
+    );
+  }
+
+
+  async function submit(e) {
+    e.preventDefault();
+
+    setError("");
+    setLoading(true);
+
+    try {
+
+      // ======================================================
+      // ADMIN LOGIN
+      // ======================================================
+
+      if (mode === "admin") {
+
+        const {
+          data,
+          error,
+        } =
+          await supabase.auth
+            .signInWithPassword({
+              email:
+                form.email.trim(),
+              password:
+                form.password,
+            });
+
+        if (error) {
+          throw error;
+        }
+
+        const {
+          data: profile,
+          error: profileError,
+        } =
+          await supabase
+            .from("profiles")
+            .select("role")
+            .eq(
+              "id",
+              data.user.id
+            )
+            .maybeSingle();
+
+        if (profileError) {
+          await supabase.auth.signOut();
+
+          throw new Error(
+            "Could not verify your administrator profile."
+          );
+        }
+
+        if (
+          profile?.role !==
+          "admin"
+        ) {
+          await supabase.auth.signOut();
+
+          throw new Error(
+            "This account does not have administrator access."
+          );
+        }
+
+        onAdminSuccess();
+
+        return;
+      }
+
+
+      // ======================================================
+      // USER REGISTRATION
+      // ======================================================
+
+      if (
+        mode === "register"
+      ) {
+
+        if (
+          !form.name.trim()
+        ) {
+          throw new Error(
+            "Please enter your full name."
+          );
+        }
+
+        if (
+          !form.phone.trim()
+        ) {
+          throw new Error(
+            "Please enter your phone number."
+          );
+        }
+
+        if (
+          form.password.length < 6
+        ) {
+          throw new Error(
+            "Password must be at least 6 characters."
+          );
+        }
+
+
+        const {
+          data,
+          error,
+        } =
+          await supabase.auth
+            .signUp({
+              email:
+                form.email.trim(),
+              password:
+                form.password,
+
+              options: {
+                data: {
+                  full_name:
+                    form.name.trim(),
+
+                  phone:
+                    form.phone.trim(),
+                },
+              },
+            });
+
+        if (error) {
+          throw error;
+        }
+
+
+        /*
+        ------------------------------------------------------
+        Create / update profile
+        ------------------------------------------------------
+        */
+
+        if (
+          data?.user
+        ) {
+
+          const {
+            error:
+              profileError,
+          } =
+            await supabase
+              .from("profiles")
+              .upsert(
+                {
+                  id:
+                    data.user.id,
+
+                  full_name:
+                    form.name.trim(),
+
+                  phone:
+                    form.phone.trim(),
+
+                  role:
+                    "user",
+                },
+                {
+                  onConflict:
+                    "id",
+                }
+              );
+
+          if (
+            profileError
+          ) {
+            console.error(
+              "PROFILE ERROR:",
+              profileError
+            );
+          }
+        }
+
+
+        /*
+        ------------------------------------------------------
+        Supabase may require email confirmation.
+        ------------------------------------------------------
+        */
+
+        if (
+          !data.session
+        ) {
+
+          alert(
+            "Registration successful.\n\nPlease check your email and confirm your account before logging in."
+          );
+
+          onModeChange(
+            "login"
+          );
+
+          return;
+        }
+
+
+        alert(
+          "Account created successfully!"
+        );
+
+        onSuccess();
+
+        return;
+      }
+
+
+      // ======================================================
+      // USER LOGIN
+      // ======================================================
+
+      if (
+        mode === "login"
+      ) {
+
+        const {
+          error,
+        } =
+          await supabase.auth
+            .signInWithPassword({
+              email:
+                form.email.trim(),
+              password:
+                form.password,
+            });
+
+        if (error) {
+          throw error;
+        }
+
+        alert(
+          "Login successful!"
+        );
+
+        onSuccess();
+
+        return;
+      }
+
+    } catch (err) {
+
+      console.error(
+        "AUTH ERROR:",
+        err
+      );
+
+      setError(
+        err.message ||
+        "Authentication failed."
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+  }
+
+
+  return (
+    <Modal
+      onClose={
+        onClose
+      }
+      className="booking-modal"
+    >
+
+      <div className="modal-scroll">
+
+        <p className="eyebrow">
+          {mode === "admin"
+            ? "ADMINISTRATION"
+            : mode === "register"
+            ? "CREATE ACCOUNT"
+            : "WELCOME BACK"}
+        </p>
+
+
+        <h2>
+
+          {mode === "admin"
+            ? "Admin Login"
+            : mode === "register"
+            ? "Create your account"
+            : "User Login"}
+
+        </h2>
+
+
+        <p className="modal-subtitle">
+
+          {mode === "admin"
+            ? "Sign in to manage EventBook."
+            : mode === "register"
+            ? "Register before booking an event."
+            : "Log in to continue booking."}
+
+        </p>
+
+
+        <form
+          className="booking-form"
+          onSubmit={
+            submit
+          }
+        >
+
+          {mode ===
+            "register" && (
+            <>
+
+              <label>
+
+                Full Name
+
+                <input
+                  name="name"
+                  value={
+                    form.name
+                  }
+                  onChange={
+                    update
+                  }
+                  placeholder="Enter your full name"
+                  required
+                />
+
+              </label>
+
+
+              <label>
+
+                Phone Number
+
+                <input
+                  name="phone"
+                  value={
+                    form.phone
+                  }
+                  onChange={
+                    update
+                  }
+                  placeholder="Enter your phone number"
+                  required
+                />
+
+              </label>
+
+            </>
+          )}
+
+
+          <label>
+
+            Email Address
+
+            <input
+              type="email"
+              name="email"
+              value={
+                form.email
+              }
+              onChange={
+                update
+              }
+              placeholder="Enter your email"
+              required
+            />
+
+          </label>
+
+
+          <label>
+
+            Password
+
+            <input
+              type="password"
+              name="password"
+              value={
+                form.password
+              }
+              onChange={
+                update
+              }
+              placeholder="Enter your password"
+              minLength="6"
+              required
+            />
+
+          </label>
+
+
+          {error && (
+            <div className="form-error">
+              {error}
+            </div>
+          )}
+
+
+          <button
+            className="primary-btn submit-btn"
+            type="submit"
+            disabled={
+              loading
+            }
+          >
+
+            {loading
+              ? "Please wait..."
+              : mode ===
+                "admin"
+              ? "Admin Login"
+              : mode ===
+                "register"
+              ? "Create Account"
+              : "Login"}
+
+          </button>
+
+        </form>
+
+
+        {mode !== "admin" && (
+          <div
+            style={{
+              marginTop: "18px",
+              textAlign: "center",
+            }}
+          >
+
+            {mode ===
+              "register" ? (
+              <p>
+
+                Already have an account?{" "}
+
+                <button
+                  type="button"
+                  className="text-btn"
+                  onClick={() =>
+                    onModeChange(
+                      "login"
+                    )
+                  }
+                >
+                  Login
+                </button>
+
+              </p>
+            ) : (
+              <p>
+
+                Don't have an account?{" "}
+
+                <button
+                  type="button"
+                  className="text-btn"
+                  onClick={() =>
+                    onModeChange(
+                      "register"
+                    )
+                  }
+                >
+                  Register
+                </button>
+
+              </p>
+            )}
+
+          </div>
+        )}
+
+
+        {mode ===
+          "admin" && (
+          <div
+            style={{
+              marginTop: "18px",
+              textAlign: "center",
+            }}
+          >
+
+            <button
+              type="button"
+              className="text-btn"
+              onClick={() =>
+                onModeChange(
+                  "login"
+                )
+              }
+            >
+              User Login
+            </button>
+
+          </div>
+        )}
+
+      </div>
+
+    </Modal>
   );
 }
 
@@ -1498,6 +2386,7 @@ function App() {
 
 function Home({
   events,
+  loading,
   remaining,
   onView,
   onBook,
@@ -1506,7 +2395,7 @@ function Home({
 
   const [
     slide,
-    setSlide
+    setSlide,
   ] = useState(0);
 
 
@@ -1514,14 +2403,15 @@ function Home({
 
     if (
       events.length < 2
-    ) return;
-
+    ) {
+      return;
+    }
 
     const timer =
       setInterval(() => {
 
         setSlide(
-          old =>
+          (old) =>
             (
               old + 1
             ) %
@@ -1530,37 +2420,61 @@ function Home({
 
       }, 5000);
 
-
     return () =>
-      clearInterval(timer);
+      clearInterval(
+        timer
+      );
 
   }, [
-    events.length
+    events.length,
   ]);
 
 
   useEffect(() => {
 
     if (
-      slide >= events.length
+      slide >=
+      events.length
     ) {
-
       setSlide(0);
-
     }
 
   }, [
     slide,
-    events.length
+    events.length,
   ]);
+
+
+  if (loading) {
+    return (
+      <section className="hero">
+
+        <div className="hero-copy">
+
+          <div className="eyebrow-pill">
+            LOADING EVENTS
+          </div>
+
+          <h1>
+            BOOK YOUR{" "}
+            <span>SEAT.</span>
+          </h1>
+
+          <p>
+            Loading the latest events...
+          </p>
+
+        </div>
+
+      </section>
+    );
+  }
 
 
   if (
     events.length === 0
   ) {
-
     return (
-
       <section className="hero">
 
         <div className="hero-copy">
@@ -1570,9 +2484,11 @@ function Home({
           </p>
 
           <h1>
-            Find an <span>event.</span>
+           Create,{" "}
+            <span>Connect</span>
             <br />
-            Book your <span>place.</span>
+            & Manage{" "}
+            <span>Events.</span>
           </h1>
 
           <p>
@@ -1582,9 +2498,7 @@ function Home({
         </div>
 
       </section>
-
     );
-
   }
 
 
@@ -1593,52 +2507,49 @@ function Home({
 
 
   return (
-
     <>
-
-      {/* ====================================================
-          HERO
-      ==================================================== */}
-
       <section className="hero">
 
         <div className="hero-copy">
 
           <div className="eyebrow-pill">
-            SIMPLE EVENT REGISTRATION
+            SIMPLE EVENT MANAGEMENT SYSTEM
           </div>
 
 
           <h1>
-
-            Find an <span>event.</span>
-
+            Create{" "}
+            <span>Connect.</span>
             <br />
-
-            Book your <span>place.</span>
-
+            & Manage{" "}
+            <span>Events.</span>
           </h1>
 
 
           <p>
-
-            View event details, register and
+            View event details,
+            register and
             <br />
             upload your proof of payment.
-
           </p>
 
 
           <button
             className="primary-btn hero-btn"
-            onClick={onEvents}
+            onClick={
+              onEvents
+            }
           >
 
-            <Icon name="calendar" />
+            <Icon
+              name="calendar"
+            />
 
             View All Events
 
-            <Icon name="arrow" />
+            <Icon
+              name="arrow"
+            />
 
           </button>
 
@@ -1654,7 +2565,7 @@ function Home({
             <Feature
               icon="shield"
               title="Secure & Safe"
-              text="Your information is always protected"
+              text="Your information is protected"
             />
 
             <Feature
@@ -1668,14 +2579,11 @@ function Home({
         </div>
 
 
-        {/* PORTRAIT FLYER */}
-
         <div className="hero-flyer-side">
 
           <div className="flyer-frame">
 
             {event.flyer ? (
-
               <img
                 src={
                   event.flyer
@@ -1683,93 +2591,94 @@ function Home({
                 alt={
                   event.name
                 }
-                className="hero-flyer"
               />
-
             ) : (
-
               <FlyerPlaceholder
                 event={event}
               />
-
             )}
 
 
-            <button
-              className="slider-arrow left"
-              onClick={() =>
-                setSlide(
-                  (
-                    slide -
-                    1 +
-                    events.length
-                  ) %
-                  events.length
-                )
-              }
-            >
-
-              <Icon name="left" />
-
-            </button>
-
-
-            <button
-              className="slider-arrow right"
-              onClick={() =>
-                setSlide(
-                  (
-                    slide + 1
-                  ) %
-                  events.length
-                )
-              }
-            >
-
-              <Icon name="right" />
-
-            </button>
-
-          </div>
-
-
-          <div className="slider-dots">
-
-            {events.map(
-              (
-                item,
-                index
-              ) => (
+            {events.length >
+              1 && (
+              <>
 
                 <button
-                  key={
-                    item.id
-                  }
-                  className={
-                    index === slide
-                      ? "active"
-                      : ""
-                  }
+                  className="slider-arrow left"
                   onClick={() =>
                     setSlide(
-                      index
+                      (
+                        slide -
+                        1 +
+                        events.length
+                      ) %
+                      events.length
                     )
                   }
-                />
+                >
+                  <Icon
+                    name="left"
+                  />
+                </button>
 
-              )
+
+                <button
+                  className="slider-arrow right"
+                  onClick={() =>
+                    setSlide(
+                      (
+                        slide + 1
+                      ) %
+                      events.length
+                    )
+                  }
+                >
+                  <Icon
+                    name="right"
+                  />
+                </button>
+
+              </>
             )}
 
           </div>
+
+
+          {events.length >
+            1 && (
+            <div className="slider-dots">
+
+              {events.map(
+                (
+                  item,
+                  index
+                ) => (
+                  <button
+                    key={
+                      item.id
+                    }
+                    className={
+                      index ===
+                      slide
+                        ? "active"
+                        : ""
+                    }
+                    onClick={() =>
+                      setSlide(
+                        index
+                      )
+                    }
+                  />
+                )
+              )}
+
+            </div>
+          )}
 
         </div>
 
       </section>
 
-
-      {/* ====================================================
-          UPCOMING EVENTS
-      ==================================================== */}
 
       <section className="page-section home-events">
 
@@ -1786,7 +2695,9 @@ function Home({
 
           <button
             className="outline-btn"
-            onClick={onEvents}
+            onClick={
+              onEvents
+            }
           >
 
             View All Events
@@ -1802,33 +2713,25 @@ function Home({
 
 
         <EventList
-
           events={
             events.slice(0, 2)
           }
-
           remaining={
             remaining
           }
-
           onView={
             onView
           }
-
           onBook={
             onBook
           }
-
           onShare={
             shareEvent
           }
-
         />
 
       </section>
-
     </>
-
   );
 }
 
@@ -1842,9 +2745,7 @@ function Feature({
   title,
   text,
 }) {
-
   return (
-
     <div className="feature">
 
       <span className="feature-icon">
@@ -1870,9 +2771,7 @@ function Feature({
       </div>
 
     </div>
-
   );
-
 }
 
 
@@ -1883,15 +2782,15 @@ function Feature({
 function FlyerPlaceholder({
   event,
 }) {
-
   return (
-
     <div className="flyer-placeholder">
 
       <div className="placeholder-glow" />
 
       <p>
-        {event.name
+        {String(
+          event.name || ""
+        )
           .split(" ")
           .slice(0, 2)
           .join(" ")
@@ -1907,13 +2806,15 @@ function FlyerPlaceholder({
           event.date
         ).toUpperCase()}
         {" · "}
-        {event.venue.toUpperCase()}
+        {String(
+          event.venue ||
+            event.location ||
+            ""
+        ).toUpperCase()}
       </small>
 
     </div>
-
   );
-
 }
 
 
@@ -1932,26 +2833,19 @@ function EventList({
   if (
     events.length === 0
   ) {
-
     return (
-
       <div className="empty-state">
-
         No events found.
-
       </div>
-
     );
-
   }
 
 
   return (
-
     <div className="event-list">
 
       {events.map(
-        event => (
+        (event) => (
 
           <article
             className="event-row"
@@ -1963,7 +2857,6 @@ function EventList({
             <div className="event-poster">
 
               {event.flyer ? (
-
                 <img
                   src={
                     event.flyer
@@ -1972,13 +2865,12 @@ function EventList({
                     event.name
                   }
                 />
-
               ) : (
-
                 <FlyerPlaceholder
-                  event={event}
+                  event={
+                    event
+                  }
                 />
-
               )}
 
             </div>
@@ -1994,26 +2886,38 @@ function EventList({
               <div className="event-meta">
 
                 <span>
+
                   <Icon
                     name="calendar"
                   />
+
                   {formatDate(
                     event.date
                   )}
+
                 </span>
 
+
                 <span>
+
                   <Icon
                     name="clock"
                   />
+
                   {event.time}
+
                 </span>
 
+
                 <span>
+
                   <Icon
                     name="pin"
                   />
-                  {event.venue}
+
+                  {event.venue ||
+                    event.location}
+
                 </span>
 
               </div>
@@ -2031,7 +2935,10 @@ function EventList({
                   size={17}
                 />
 
-                {remaining(event)}
+                {remaining(
+                  event
+                )}
+
                 {" places remaining"}
 
               </span>
@@ -2044,11 +2951,15 @@ function EventList({
               <button
                 className="outline-btn"
                 onClick={() =>
-                  onView(event)
+                  onView(
+                    event
+                  )
                 }
               >
 
-                <Icon name="eye" />
+                <Icon
+                  name="eye"
+                />
 
                 View Event
 
@@ -2058,16 +2969,24 @@ function EventList({
               <button
                 className="primary-btn"
                 disabled={
-                  remaining(event) === 0
+                  remaining(
+                    event
+                  ) === 0
                 }
                 onClick={() =>
-                  onBook(event)
+                  onBook(
+                    event
+                  )
                 }
               >
 
-                <Icon name="calendar" />
+                <Icon
+                  name="calendar"
+                />
 
-                {remaining(event)
+                {remaining(
+                  event
+                )
                   ? "Book Now"
                   : "Fully Booked"}
 
@@ -2077,11 +2996,15 @@ function EventList({
               <button
                 className="outline-btn"
                 onClick={() =>
-                  onShare(event)
+                  onShare(
+                    event
+                  )
                 }
               >
 
-                <Icon name="share" />
+                <Icon
+                  name="share"
+                />
 
                 Share
 
@@ -2090,19 +3013,16 @@ function EventList({
             </div>
 
           </article>
-
         )
       )}
 
     </div>
-
   );
-
 }
 
 
 // ============================================================
-// EVENT DETAILS MODAL
+// EVENT DETAILS
 // ============================================================
 
 function EventDetails({
@@ -2115,7 +3035,6 @@ function EventDetails({
 }) {
 
   return (
-
     <Modal
       onClose={
         onClose
@@ -2138,27 +3057,35 @@ function EventDetails({
         <div className="detail-meta">
 
           <span>
-            <Icon name="calendar" />
+            <Icon
+              name="calendar"
+            />
             {formatDate(
               event.date
             )}
           </span>
 
+
           <span>
-            <Icon name="clock" />
+            <Icon
+              name="clock"
+            />
             {event.time}
           </span>
 
+
           <span>
-            <Icon name="pin" />
-            {event.venue}
+            <Icon
+              name="pin"
+            />
+            {event.venue ||
+              event.location}
           </span>
 
         </div>
 
 
         {event.flyer && (
-
           <img
             className="details-flyer"
             src={
@@ -2168,7 +3095,6 @@ function EventDetails({
               event.name
             }
           />
-
         )}
 
 
@@ -2197,7 +3123,9 @@ function EventDetails({
           </strong>
 
           <p>
-            {event.paymentInfo}
+            {event.payment_info ||
+              event.paymentInfo ||
+              "Please make payment using the official payment details provided by the event organiser."}
           </p>
 
         </div>
@@ -2209,13 +3137,17 @@ function EventDetails({
 
         <button
           className="primary-btn"
-          disabled={!remaining}
+          disabled={
+            !remaining
+          }
           onClick={
             onBook
           }
         >
 
-          <Icon name="calendar" />
+          <Icon
+            name="calendar"
+          />
 
           {remaining
             ? "Book Now"
@@ -2231,7 +3163,9 @@ function EventDetails({
           }
         >
 
-          <Icon name="share" />
+          <Icon
+            name="share"
+          />
 
           Share
 
@@ -2286,18 +3220,17 @@ function EventDetails({
       </div>
 
     </Modal>
-
   );
-
 }
 
 
 // ============================================================
-// BOOKING MODAL
+// BOOKING
 // ============================================================
 
 function Booking({
   event,
+  user,
   remaining,
   onClose,
   onSubmit,
@@ -2305,66 +3238,67 @@ function Booking({
 
   const [
     form,
-    setForm
+    setForm,
   ] = useState({
+    name:
+      user?.user_metadata
+        ?.full_name || "",
 
-    name: "",
+    phone:
+      user?.user_metadata
+        ?.phone || "",
 
-    phone: "",
-
-    email: "",
+    email:
+      user?.email || "",
 
     quantity: 1,
 
-    paymentReference: "",
+    paymentReference:
+      "",
 
-    proofFile: null,
-
+    proofFile:
+      null,
   });
 
 
   const [
     error,
-    setError
+    setError,
   ] = useState("");
 
 
+  const [
+    submitting,
+    setSubmitting,
+  ] = useState(false);
+
+
   function update(e) {
-
     setForm(
-      old => ({
-
+      (old) => ({
         ...old,
-
         [e.target.name]:
           e.target.value,
-
       })
     );
-
   }
 
 
   function fileChange(e) {
-
     const file =
       e.target.files?.[0];
 
-
     setError("");
 
-
     if (!file) {
-
       setForm(
-        old => ({
+        (old) => ({
           ...old,
           proofFile: null,
         })
       );
 
       return;
-
     }
 
 
@@ -2373,7 +3307,6 @@ function Booking({
         file.type
       )
     ) {
-
       setError(
         "Proof must be PDF, JPG, JPEG or PNG."
       );
@@ -2381,7 +3314,6 @@ function Booking({
       e.target.value = "";
 
       return;
-
     }
 
 
@@ -2389,7 +3321,6 @@ function Booking({
       file.size >
       MAX_FILE_SIZE
     ) {
-
       setError(
         "Proof must be 5 MB or smaller."
       );
@@ -2397,22 +3328,56 @@ function Booking({
       e.target.value = "";
 
       return;
-
     }
 
 
     setForm(
-      old => ({
+      (old) => ({
         ...old,
         proofFile: file,
       })
     );
+  }
 
+
+  async function submit(e) {
+    e.preventDefault();
+
+    if (error) return;
+
+    if (
+      !form.name.trim()
+    ) {
+      setError(
+        "Please enter your full name."
+      );
+
+      return;
+    }
+
+    if (
+      !form.phone.trim()
+    ) {
+      setError(
+        "Please enter your phone number."
+      );
+
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      await onSubmit(
+        form
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
 
   return (
-
     <Modal
       onClose={
         onClose
@@ -2444,7 +3409,8 @@ function Booking({
 
           {" · "}
 
-          {event.venue}
+          {event.venue ||
+            event.location}
 
         </p>
 
@@ -2459,15 +3425,9 @@ function Booking({
 
         <form
           className="booking-form"
-          onSubmit={e => {
-
-            e.preventDefault();
-
-            if (!error) {
-              onSubmit(form);
-            }
-
-          }}
+          onSubmit={
+            submit
+          }
         >
 
           <label>
@@ -2521,8 +3481,8 @@ function Booking({
               onChange={
                 update
               }
-              placeholder="Enter your email"
               required
+              readOnly
             />
 
           </label>
@@ -2592,23 +3552,19 @@ function Booking({
 
 
           {form.proofFile && (
-
             <div className="file-name">
 
               ✓{" "}
               {form.proofFile.name}
 
             </div>
-
           )}
 
 
           {error && (
-
             <div className="form-error">
               {error}
             </div>
-
           )}
 
 
@@ -2616,11 +3572,14 @@ function Booking({
             className="primary-btn submit-btn"
             disabled={
               !remaining ||
-              !!error
+              !!error ||
+              submitting
             }
           >
 
-            Submit Registration
+            {submitting
+              ? "Submitting..."
+              : "Submit Registration"}
 
           </button>
 
@@ -2629,9 +3588,7 @@ function Booking({
       </div>
 
     </Modal>
-
   );
-
 }
 
 
@@ -2646,43 +3603,52 @@ function CreateEvent({
 
   const [
     form,
-    setForm
+    setForm,
   ] = useState({
-
     name: "",
-
     date: "",
-
     time: "",
-
     venue: "",
-
     capacity: 100,
-
     description: "",
-
     paymentInfo: "",
-
     flyerFile: null,
-
   });
 
 
-  function update(e) {
+  const [
+    submitting,
+    setSubmitting,
+  ] = useState(false);
 
+
+  function update(e) {
     setForm(
-      old => ({
+      (old) => ({
         ...old,
         [e.target.name]:
           e.target.value,
       })
     );
+  }
 
+
+  async function submit(e) {
+    e.preventDefault();
+
+    setSubmitting(true);
+
+    try {
+      await onSubmit(
+        form
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
 
   return (
-
     <Modal
       onClose={
         onClose
@@ -2704,16 +3670,13 @@ function CreateEvent({
 
         <form
           className="booking-form"
-          onSubmit={e => {
-
-            e.preventDefault();
-
-            onSubmit(form);
-
-          }}
+          onSubmit={
+            submit
+          }
         >
 
           <label>
+
             Event Name
 
             <input
@@ -2731,6 +3694,7 @@ function CreateEvent({
 
 
           <label>
+
             Date
 
             <input
@@ -2749,6 +3713,7 @@ function CreateEvent({
 
 
           <label>
+
             Time
 
             <input
@@ -2767,6 +3732,7 @@ function CreateEvent({
 
 
           <label>
+
             Venue
 
             <input
@@ -2784,6 +3750,7 @@ function CreateEvent({
 
 
           <label>
+
             Capacity
 
             <input
@@ -2803,14 +3770,15 @@ function CreateEvent({
 
 
           <label>
+
             Portrait Event Flyer
 
             <input
               type="file"
               accept=".jpg,.jpeg,.png,.webp"
-              onChange={e =>
+              onChange={(e) =>
                 setForm(
-                  old => ({
+                  (old) => ({
                     ...old,
                     flyerFile:
                       e.target.files?.[0] ||
@@ -2829,6 +3797,7 @@ function CreateEvent({
 
 
           <label>
+
             Event Description
 
             <textarea
@@ -2847,6 +3816,7 @@ function CreateEvent({
 
 
           <label>
+
             Payment Information
 
             <textarea
@@ -2866,11 +3836,18 @@ function CreateEvent({
           <button
             className="primary-btn"
             type="submit"
+            disabled={
+              submitting
+            }
           >
 
-            <Icon name="plus" />
+            <Icon
+              name="plus"
+            />
 
-            Create Event
+            {submitting
+              ? "Saving Event..."
+              : "Create Event"}
 
           </button>
 
@@ -2879,9 +3856,7 @@ function CreateEvent({
       </div>
 
     </Modal>
-
   );
-
 }
 
 
@@ -2892,6 +3867,7 @@ function CreateEvent({
 function Admin({
   events,
   registrations,
+  loadingRegistrations,
   remaining,
   onCreate,
   onDelete,
@@ -2903,7 +3879,6 @@ function Admin({
 }) {
 
   return (
-
     <section className="page-section admin-page">
 
       <div className="section-heading">
@@ -2934,7 +3909,9 @@ function Admin({
             }
           >
 
-            <Icon name="plus" />
+            <Icon
+              name="plus"
+            />
 
             Create Event
 
@@ -2948,7 +3925,9 @@ function Admin({
             }
           >
 
-            <Icon name="logout" />
+            <Icon
+              name="logout"
+            />
 
             Logout
 
@@ -2975,93 +3954,98 @@ function Admin({
         </div>
 
 
-        {events.map(
-          event => (
+        {events.length ===
+        0 ? (
+          <div className="empty-state">
+            No events found.
+          </div>
+        ) : (
+          events.map(
+            (event) => (
 
-            <div
-              className="admin-event"
-              key={
-                event.id
-              }
-            >
+              <div
+                className="admin-event"
+                key={
+                  event.id
+                }
+              >
 
-              <div className="admin-thumb">
+                <div className="admin-thumb">
 
-                {event.flyer ? (
-
-                  <img
-                    src={
-                      event.flyer
-                    }
-                    alt=""
-                  />
-
-                ) : (
-
-                  <FlyerPlaceholder
-                    event={
-                      event
-                    }
-                  />
-
-                )}
-
-              </div>
-
-
-              <div className="admin-event-info">
-
-                <strong>
-                  {event.name}
-                </strong>
-
-                <span>
-                  {formatDate(
-                    event.date
+                  {event.flyer ? (
+                    <img
+                      src={
+                        event.flyer
+                      }
+                      alt=""
+                    />
+                  ) : (
+                    <FlyerPlaceholder
+                      event={
+                        event
+                      }
+                    />
                   )}
-                  {" · "}
-                  {event.time}
-                  {" · "}
-                  {event.venue}
-                </span>
 
-                <span>
-                  {remaining(event)}
-                  {" places remaining"}
-                </span>
-
-              </div>
+                </div>
 
 
-              <div className="admin-actions">
+                <div className="admin-event-info">
 
-                <button
-                  className="outline-btn"
-                  onClick={() =>
-                    onView(
+                  <strong>
+                    {event.name}
+                  </strong>
+
+                  <span>
+                    {formatDate(
+                      event.date
+                    )}
+                    {" · "}
+                    {event.time}
+                    {" · "}
+                    {event.venue ||
+                      event.location}
+                  </span>
+
+                  <span>
+                    {remaining(
                       event
-                    )
-                  }
-                >
-                  View Event
-                </button>
+                    )}
+                    {" places remaining"}
+                  </span>
+
+                </div>
 
 
-                <button
-                  className="danger-btn"
-                  onClick={() =>
-                    onDelete(
-                      event.id
-                    )
-                  }
-                >
-                  Delete
-                </button>
+                <div className="admin-actions">
+
+                  <button
+                    className="outline-btn"
+                    onClick={() =>
+                      onView(
+                        event
+                      )
+                    }
+                  >
+                    View Event
+                  </button>
+
+
+                  <button
+                    className="danger-btn"
+                    onClick={() =>
+                      onDelete(
+                        event.id
+                      )
+                    }
+                  >
+                    Delete
+                  </button>
+
+                </div>
 
               </div>
-
-            </div>
-
+            )
           )
         )}
 
@@ -3112,14 +4096,16 @@ function Admin({
         </div>
 
 
-        {registrations.length === 0 ? (
-
+        {loadingRegistrations ? (
+          <div className="empty-state">
+            Loading registrations...
+          </div>
+        ) : registrations.length ===
+          0 ? (
           <div className="empty-state">
             No registrations yet.
           </div>
-
         ) : (
-
           <div className="table-scroll">
 
             <table>
@@ -3168,7 +4154,7 @@ function Admin({
               <tbody>
 
                 {registrations.map(
-                  r => (
+                  (r) => (
 
                     <tr
                       key={
@@ -3177,11 +4163,13 @@ function Admin({
                     >
 
                       <td>
-                        {r.eventName}
+                        {r.event_name ||
+                          r.eventName}
                       </td>
 
                       <td>
-                        {r.fullName}
+                        {r.full_name ||
+                          r.fullName}
                       </td>
 
                       <td>
@@ -3197,7 +4185,8 @@ function Admin({
                       </td>
 
                       <td>
-                        {r.paymentReference}
+                        {r.payment_reference ||
+                          r.paymentReference}
                       </td>
 
                       <td>
@@ -3210,23 +4199,21 @@ function Admin({
                             )
                           }
                         >
-
                           View Proof
-
                         </button>
 
                       </td>
 
                       <td>
                         {new Date(
-                          r.registeredAt
+                          r.created_at ||
+                            r.registeredAt
                         ).toLocaleDateString(
                           "en-ZA"
                         )}
                       </td>
 
                     </tr>
-
                   )
                 )}
 
@@ -3235,15 +4222,12 @@ function Admin({
             </table>
 
           </div>
-
         )}
 
       </div>
 
     </section>
-
   );
-
 }
 
 
@@ -3256,36 +4240,26 @@ function ProofViewer({
   onClose,
 }) {
 
+  const type =
+    registration.proof_file_type ||
+    registration.proofFileType ||
+    "";
+
   const isImage =
-    registration.proofFileType?.startsWith(
+    type.startsWith(
       "image/"
     );
 
   const isPdf =
-    registration.proofFileType ===
+    type ===
     "application/pdf";
 
-
-  function download() {
-
-    const link =
-      document.createElement(
-        "a"
-      );
-
-    link.href =
-      registration.proofData;
-
-    link.download =
-      registration.proofFileName;
-
-    link.click();
-
-  }
+  const proofUrl =
+    registration.proofData ||
+    "";
 
 
   return (
-
     <Modal
       onClose={
         onClose
@@ -3300,11 +4274,13 @@ function ProofViewer({
         </p>
 
         <h2>
-          {registration.fullName}
+          {registration.full_name ||
+            registration.fullName}
         </h2>
 
         <p>
-          {registration.proofFileName}
+          {registration.proof_file_name ||
+            registration.proofFileName}
         </p>
 
       </div>
@@ -3312,42 +4288,51 @@ function ProofViewer({
 
       <div className="proof-viewer">
 
-        {isImage && (
-
-          <img
-            src={
-              registration.proofData
-            }
-            alt="Proof of payment"
-          />
-
+        {!proofUrl && (
+          <div className="empty-state">
+            Proof of payment could not be loaded.
+          </div>
         )}
 
 
-        {isPdf && (
+        {isImage &&
+          proofUrl && (
+            <img
+              src={
+                proofUrl
+              }
+              alt="Proof of payment"
+            />
+          )}
 
-          <iframe
-            src={
-              registration.proofData
-            }
-            title="Proof of payment"
-          />
 
-        )}
+        {isPdf &&
+          proofUrl && (
+            <iframe
+              src={
+                proofUrl
+              }
+              title="Proof of payment"
+            />
+          )}
 
       </div>
 
 
       <div className="modal-actions">
 
-        <button
-          className="primary-btn"
-          onClick={
-            download
-          }
-        >
-          Download Proof
-        </button>
+        {proofUrl && (
+          <a
+            className="primary-btn"
+            href={
+              proofUrl
+            }
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open Proof
+          </a>
+        )}
 
 
         <button
@@ -3362,14 +4347,12 @@ function ProofViewer({
       </div>
 
     </Modal>
-
   );
-
 }
 
 
 // ============================================================
-// GENERIC MODAL
+// MODAL
 // ============================================================
 
 function Modal({
@@ -3379,7 +4362,6 @@ function Modal({
 }) {
 
   return (
-
     <div
       className="modal-backdrop"
       onMouseDown={
@@ -3388,10 +4370,8 @@ function Modal({
     >
 
       <div
-        className={
-          `modal-card ${className}`
-        }
-        onMouseDown={e =>
+        className={`modal-card ${className}`}
+        onMouseDown={(e) =>
           e.stopPropagation()
         }
       >
@@ -3402,20 +4382,17 @@ function Modal({
             onClose
           }
         >
-
-          <Icon name="close" />
-
+          <Icon
+            name="close"
+          />
         </button>
-
 
         {children}
 
       </div>
 
     </div>
-
   );
-
 }
 
 
@@ -3428,48 +4405,26 @@ function Footer({
 }) {
 
   return (
-
     <footer className="footer">
 
       <div className="footer-inner">
 
-
         <div className="footer-brand">
 
-          <button
-            className="brand"
-            onClick={() =>
-              onNavigate(
-                "home"
-              )
-            }
-          >
-
-            <span className="brand-icon">
-
-              <Icon
-                name="calendar"
-                size={31}
-              />
-
-            </span>
+      
 
 
             <span>
 
-              <strong>
-                Event<span>Book</span>
-              </strong>
-
-              <small>
-                Simple event registration
-              </small>
+             <a className="brand" href="#">
+  <img
+    src={eventraLogo}
+    alt="Eventra"
+    className="brand-logo"
+  />
+</a>
 
             </span>
-
-          </button>
-
-
           <p>
             Find events, register easily
             and upload your proof of payment.
@@ -3597,9 +4552,7 @@ function Footer({
       </div>
 
     </footer>
-
   );
-
 }
 
 
@@ -3610,11 +4563,7 @@ function Footer({
 createRoot(
   document.getElementById("root")
 ).render(
-
   <React.StrictMode>
-
     <App />
-
   </React.StrictMode>
-
 );
