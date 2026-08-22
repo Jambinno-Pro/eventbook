@@ -587,8 +587,9 @@ function App() {
   // ==========================================================
 
   async function loadEvents() {
-    setLoadingEvents(true);
+  setLoadingEvents(true);
 
+  try {
     const {
       data,
       error,
@@ -610,45 +611,67 @@ function App() {
       );
 
       setEvents([]);
-      setLoadingEvents(false);
       return;
     }
 
-    const formattedEvents =
-      (data || []).map((event) => {
-        const flyerPath =
-          event.flyer_path ||
-          "";
-
-        const flyer =
-          event.flyer_url ||
-          event.flyer ||
-          (flyerPath
-            ? getPublicFileUrl(
-                STORAGE_BUCKETS.FLYERS,
-                flyerPath
-              )
-            : "");
-
+    const formattedEvents = (data || []).map(
+      (event) => {
         return {
           ...event,
-          flyer,
-          flyer_url: flyer,
+
+          // ==================================================
+          // FLYER
+          // Database column: flyer_url
+          // ==================================================
+
+          flyer:
+            event.flyer_url || "",
+
+          flyer_url:
+            event.flyer_url || "",
+
+          // ==================================================
+          // LOCATION
+          // ==================================================
+
           venue:
             event.venue ||
             event.location ||
             "",
+
           location:
             event.location ||
             event.venue ||
             "",
         };
-      });
+      }
+    );
+
+    console.log(
+      "EVENTS LOADED:",
+      formattedEvents
+    );
 
     setEvents(formattedEvents);
 
+  } catch (error) {
+    console.error(
+      "LOAD EVENTS ERROR:",
+      error
+    );
+
+    alert(
+      `Could not load events.\n\n${
+        error.message || error
+      }`
+    );
+
+    setEvents([]);
+
+  } finally {
     setLoadingEvents(false);
   }
+}
 
 
   useEffect(() => {
@@ -855,143 +878,192 @@ function App() {
   // CREATE EVENT
   // ==========================================================
 
-  async function createEvent(data) {
-    try {
-      if (!admin) {
-        alert(
-          "Administrator access is required."
-        );
+async function createEvent(data) {
+  try {
+    // ========================================================
+    // 1. CHECK ADMIN
+    // ========================================================
 
-        return;
-      }
+    if (!admin) {
+      alert("Administrator access is required.");
+      return;
+    }
 
-      if (
-        data.flyerFile &&
-        !FLYER_TYPES.includes(
-          data.flyerFile.type
-        )
-      ) {
-        alert(
-          "Flyer must be JPG, PNG or WEBP."
-        );
+    // ========================================================
+    // 2. VALIDATE FLYER
+    // ========================================================
 
-        return;
-      }
+    if (
+      data.flyerFile &&
+      !FLYER_TYPES.includes(data.flyerFile.type)
+    ) {
+      alert("Flyer must be JPG, PNG or WEBP.");
+      return;
+    }
 
-      if (
-        data.flyerFile &&
-        data.flyerFile.size >
-          MAX_FILE_SIZE
-      ) {
-        alert(
-          "Flyer must be 5 MB or smaller."
-        );
+    if (
+      data.flyerFile &&
+      data.flyerFile.size > MAX_FILE_SIZE
+    ) {
+      alert("Flyer must be 5 MB or smaller.");
+      return;
+    }
 
-        return;
-      }
+    // ========================================================
+    // 3. CREATE EVENT ID
+    // ========================================================
 
-      const eventId =
-        crypto.randomUUID();
+    const eventId = crypto.randomUUID();
 
-      let flyerPath = "";
+    // ========================================================
+    // 4. UPLOAD FLYER
+    // ========================================================
 
-      if (data.flyerFile) {
-        flyerPath =
-          await uploadFlyer(
-            data.flyerFile,
-            eventId
-          );
-      }
+    let flyerPath = "";
 
-      const event = {
-        id: eventId,
+    if (data.flyerFile) {
+      console.log("Uploading flyer...");
 
-        name:
-          data.name.trim(),
-
-        date:
-          data.date,
-
-        time:
-          data.time.trim(),
-
-        venue:
-          data.venue.trim(),
-
-        location:
-          data.venue.trim(),
-
-        capacity:
-          Number(data.capacity),
-
-        description:
-          data.description.trim(),
-
-        payment_info:
-          data.paymentInfo?.trim() || "",
-
-        flyer_path:
-          flyerPath || null,
-      };
-
-      const {
-        data: insertedEvent,
-        error,
-      } = await supabase
-        .from("events")
-        .insert([event])
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      const formattedEvent = {
-        ...insertedEvent,
-
-        flyer:
-          flyerPath
-            ? getPublicFileUrl(
-                STORAGE_BUCKETS.FLYERS,
-                flyerPath
-              )
-            : "",
-
-        flyer_url:
-          flyerPath
-            ? getPublicFileUrl(
-                STORAGE_BUCKETS.FLYERS,
-                flyerPath
-              )
-            : "",
-      };
-
-      setEvents((old) => [
-        ...old,
-        formattedEvent,
-      ]);
-
-      setCreateOpen(false);
-
-      alert(
-        "Event created successfully."
+      flyerPath = await uploadFlyer(
+        data.flyerFile,
+        eventId
       );
 
-    } catch (error) {
+      console.log(
+        "FLYER PATH:",
+        flyerPath
+      );
+    }
+
+    // ========================================================
+    // 5. CREATE PUBLIC FLYER URL
+    // ========================================================
+
+    const flyerUrl = flyerPath
+      ? getPublicFileUrl(
+          STORAGE_BUCKETS.FLYERS,
+          flyerPath
+        )
+      : "";
+
+    console.log(
+      "FLYER PUBLIC URL:",
+      flyerUrl
+    );
+
+    // ========================================================
+    // 6. CREATE DATABASE RECORD
+    // ========================================================
+
+    const event = {
+      id: eventId,
+
+      name:
+        data.name.trim(),
+
+      date:
+        data.date,
+
+      time:
+        data.time.trim(),
+
+      venue:
+        data.venue.trim(),
+
+      capacity:
+        Number(data.capacity),
+
+      description:
+        data.description.trim(),
+
+      payment_info:
+        data.paymentInfo?.trim() || "",
+
+      // IMPORTANT:
+      // Your database column is flyer_url
+      flyer_url:
+        flyerUrl || null,
+    };
+
+    console.log(
+      "CREATING EVENT:",
+      event
+    );
+
+    // ========================================================
+    // 7. INSERT EVENT
+    // ========================================================
+
+    const {
+      data: insertedEvent,
+      error,
+    } = await supabase
+      .from("events")
+      .insert([event])
+      .select()
+      .single();
+
+    if (error) {
       console.error(
-        "CREATE EVENT ERROR:",
+        "CREATE EVENT DATABASE ERROR:",
         error
       );
 
-      alert(
-        `Could not create event.\n\n${
-          error.message || error
-        }`
-      );
+      throw error;
     }
-  }
 
+    console.log(
+      "EVENT CREATED:",
+      insertedEvent
+    );
+
+    // ========================================================
+    // 8. FORMAT EVENT FOR THE APP
+    // ========================================================
+
+    const formattedEvent = {
+      ...insertedEvent,
+
+      flyer:
+        insertedEvent.flyer_url || "",
+
+      flyer_url:
+        insertedEvent.flyer_url || "",
+    };
+
+    // ========================================================
+    // 9. UPDATE EVENTS IN APP
+    // ========================================================
+
+    setEvents((old) => [
+      ...old,
+      formattedEvent,
+    ]);
+
+    // ========================================================
+    // 10. CLOSE CREATE EVENT WINDOW
+    // ========================================================
+
+    setCreateOpen(false);
+
+    alert(
+      "Event created successfully."
+    );
+
+  } catch (error) {
+
+    console.error(
+      "CREATE EVENT ERROR:",
+      error
+    );
+
+    alert(
+      `Could not create event.\n\n${
+        error.message || error
+      }`
+    );
+  }
+}
 
   // ==========================================================
   // BOOK EVENT
