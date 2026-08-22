@@ -4598,12 +4598,12 @@ function Footer({
 
           <p>
             <Icon name="phone" />
-            +27 12 345 6789
+            +27 61 421 7057
           </p>
 
           <p>
             <Icon name="mail" />
-            info@eventbook.co.za
+            info@eventra.co.za
           </p>
 
           <p>
@@ -4618,8 +4618,8 @@ function Footer({
 
       <div className="footer-bottom">
 
-        © 2026 EventBook.
-        All rights reserved.
+        © 2026 Eventra.
+        By Inno All rights reserved.
 
       </div>
 
