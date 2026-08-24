@@ -2924,3 +2924,157 @@ main {
 /* ============================================================
    END OF STYLES
    ============================================================ */
+
+   /* =========================================================
+   EVENTRA HOME — MATCH ABOUT PAGE THEME
+   Premium Navy & Gold
+========================================================= */
+
+/* Main Home background */
+.app,
+main {
+  background: #061426;
+  color: #ffffff;
+}
+
+/* Home hero */
+.hero {
+  background:
+    radial-gradient(
+      circle at 85% 5%,
+      rgba(34, 91, 155, 0.22),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 5% 45%,
+      rgba(212, 175, 55, 0.07),
+      transparent 30%
+    ),
+    #061426;
+}
+
+/* Hero heading */
+.hero h1,
+.hero h2 {
+  color: #ffffff;
+}
+
+/* Hero paragraph */
+.hero p,
+.hero-copy p {
+  color: #b8c4d4;
+}
+
+/* Gold primary buttons */
+.hero-btn,
+.primary-btn,
+.primary-button {
+  background: #d4af37;
+  color: #07182b;
+  border-color: #d4af37;
+}
+
+.hero-btn:hover,
+.primary-btn:hover,
+.primary-button:hover {
+  box-shadow: 0 12px 30px rgba(212, 175, 55, 0.25);
+  transform: translateY(-2px);
+}
+
+/* Secondary / outline buttons */
+.outline-btn,
+.secondary-btn,
+.secondary-button {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+}
+
+.outline-btn:hover,
+.secondary-btn:hover,
+.secondary-button:hover {
+  border-color: rgba(212, 175, 55, 0.45);
+}
+
+/* Home sections */
+.page-section,
+.events-section,
+.feature-section {
+  background: #061426;
+}
+
+/* Section headings */
+.section-heading h2,
+.page-section h2,
+.hero h1 {
+  color: #ffffff;
+}
+
+/* Eyebrow / small gold labels */
+.eyebrow {
+  color: #d4af37;
+  border-color: rgba(212, 175, 55, 0.45);
+}
+
+/* Event cards */
+.event-card,
+.feature-card {
+  background: rgba(12, 34, 59, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
+}
+
+.event-card:hover,
+.feature-card:hover {
+  border-color: rgba(212, 175, 55, 0.28);
+}
+
+/* Card text */
+.event-card h3,
+.event-card h4,
+.feature-card h3,
+.feature-card h4 {
+  color: #ffffff;
+}
+
+.event-card p,
+.feature-card p {
+  color: #aebdce;
+}
+
+/* Gold icons / accents */
+.feature-icon,
+.event-icon {
+  background: rgba(212, 175, 55, 0.10);
+  color: #d4af37;
+}
+
+/* Search / input fields */
+input,
+textarea,
+select {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #8193a8;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: rgba(212, 175, 55, 0.45);
+  outline: none;
+}
+
+/* Gold links */
+a {
+  color: #d4af37;
+}
+
+a:hover {
+  color: #e2c45c;
+}
