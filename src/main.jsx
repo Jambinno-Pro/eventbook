@@ -4,7 +4,6 @@ import { createRoot } from "react-dom/client";
 import { supabase } from "./supabase";
 import "./styles.css";
 
-
 /*
 ============================================================
  EVENTRA
@@ -513,7 +512,14 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Supabase fires PASSWORD_RECOVERY when the user arrives
+      // through a valid password-reset email link.
+      if (event === "PASSWORD_RECOVERY") {
+        setAuthMode("reset");
+        setAuthOpen(true);
+      }
+
       setTimeout(() => {
         refreshAuthState(session);
       }, 0);
@@ -1488,17 +1494,31 @@ function AuthModal({
     phone: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const [error, setError] = useState("");
 
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (mode === "reset" && user?.email) {
+      setForm((old) => ({
+        ...old,
+        email: user.email,
+      }));
+    }
+  }, [mode, user?.email]);
+
   function update(e) {
     setForm((old) => ({
       ...old,
       [e.target.name]: e.target.value,
     }));
+
+    if (error) {
+      setError("");
+    }
   }
 
   async function submit(e) {
@@ -1508,6 +1528,75 @@ function AuthModal({
     setLoading(true);
 
     try {
+      // ======================================================
+      // PASSWORD RESET REQUEST
+      // ======================================================
+
+      if (mode === "forgot") {
+        if (!form.email.trim()) {
+          throw new Error("Please enter your email address.");
+        }
+
+        // Using window.location.origin means the same code works
+        // on localhost and on the deployed Vercel website.
+        const redirectTo = `${window.location.origin}/`;
+
+        const { error } = await supabase.auth.resetPasswordForEmail(
+          form.email.trim(),
+          {
+            redirectTo,
+          },
+        );
+
+        if (error) {
+          throw error;
+        }
+
+        alert(
+          "Password reset email sent.\n\n" +
+            "Please check your email and open the reset link. " +
+            "You will then be able to create a new password here.",
+        );
+
+        onModeChange("login");
+        return;
+      }
+
+      // ======================================================
+      // UPDATE PASSWORD AFTER RECOVERY LINK
+      // ======================================================
+
+      if (mode === "reset") {
+        if (form.password.length < 6) {
+          throw new Error("Password must be at least 6 characters.");
+        }
+
+        if (form.password !== form.confirmPassword) {
+          throw new Error("Passwords do not match.");
+        }
+
+        const { error } = await supabase.auth.updateUser({
+          password: form.password,
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        // End the recovery session so the user can log in normally
+        // with the new password. This also prevents the reset screen
+        // from remaining active after a successful password change.
+        await supabase.auth.signOut();
+
+        alert(
+          "Your password has been updated successfully.\n\n" +
+            "You can now log in using your new password.",
+        );
+
+        onModeChange("login");
+        return;
+      }
+
       // ======================================================
       // ADMIN LOGIN
       // ======================================================
@@ -1572,13 +1661,10 @@ function AuthModal({
 
         const { data, error } = await supabase.auth.signUp({
           email: form.email.trim(),
-
           password: form.password,
-
           options: {
             data: {
               full_name: form.name.trim(),
-
               phone: form.phone.trim(),
             },
           },
@@ -1588,14 +1674,11 @@ function AuthModal({
           throw error;
         }
 
-        // The Supabase database trigger
-        // creates the public.profiles row.
-
+        // The Supabase database trigger creates the public.profiles row.
         if (!data.session) {
           alert(
             "Account created.\n\n" +
-              "Please check your email " +
-              "and confirm your account " +
+              "Please check your email and confirm your account " +
               "before logging in.",
           );
 
@@ -1605,7 +1688,6 @@ function AuthModal({
         }
 
         alert("Account created successfully!");
-
         onSuccess();
 
         return;
@@ -1618,7 +1700,6 @@ function AuthModal({
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({
           email: form.email.trim(),
-
           password: form.password,
         });
 
@@ -1627,7 +1708,6 @@ function AuthModal({
         }
 
         alert("Login successful!");
-
         onSuccess();
 
         return;
@@ -1641,35 +1721,52 @@ function AuthModal({
     }
   }
 
+  const isForgot = mode === "forgot";
+  const isReset = mode === "reset";
+  const isAdmin = mode === "admin";
+  const isRegister = mode === "register";
+
   return (
     <Modal onClose={onClose} className="booking-modal">
       <div className="modal-scroll">
         <p className="eyebrow">
-          {mode === "admin"
-            ? "ADMINISTRATION"
-            : mode === "register"
-              ? "CREATE ACCOUNT"
-              : "WELCOME BACK"}
+          {isReset
+            ? "PASSWORD RECOVERY"
+            : isForgot
+              ? "RESET PASSWORD"
+              : isAdmin
+                ? "ADMINISTRATION"
+                : isRegister
+                  ? "CREATE ACCOUNT"
+                  : "WELCOME BACK"}
         </p>
 
         <h2>
-          {mode === "admin"
-            ? "Admin Login"
-            : mode === "register"
-              ? "Create your account"
-              : "User Login"}
+          {isReset
+            ? "Create a new password"
+            : isForgot
+              ? "Reset your password"
+              : isAdmin
+                ? "Admin Login"
+                : isRegister
+                  ? "Create your account"
+                  : "User Login"}
         </h2>
 
         <p className="modal-subtitle">
-          {mode === "admin"
-            ? "Sign in to manage Eventra."
-            : mode === "register"
-              ? "Register before booking an event."
-              : "Log in to continue booking."}
+          {isReset
+            ? "Enter and confirm your new password."
+            : isForgot
+              ? "Enter your email and we will send you a secure reset link."
+              : isAdmin
+                ? "Sign in to manage Eventra."
+                : isRegister
+                  ? "Register before booking an event."
+                  : "Log in to continue booking."}
         </p>
 
         <form className="booking-form" onSubmit={submit}>
-          {mode === "register" && (
+          {isRegister && (
             <>
               <label>
                 Full Name
@@ -1704,21 +1801,41 @@ function AuthModal({
               onChange={update}
               placeholder="Enter your email"
               required
+              readOnly={isReset}
             />
           </label>
 
-          <label>
-            Password
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={update}
-              placeholder="Enter your password"
-              minLength="6"
-              required
-            />
-          </label>
+          {!isForgot && (
+            <label>
+              {isReset ? "New Password" : "Password"}
+              <input
+                type="password"
+                name="password"
+                value={form.password}
+                onChange={update}
+                placeholder={
+                  isReset ? "Enter your new password" : "Enter your password"
+                }
+                minLength="6"
+                required={!isForgot}
+              />
+            </label>
+          )}
+
+          {isReset && (
+            <label>
+              Confirm New Password
+              <input
+                type="password"
+                name="confirmPassword"
+                value={form.confirmPassword}
+                onChange={update}
+                placeholder="Confirm your new password"
+                minLength="6"
+                required
+              />
+            </label>
+          )}
 
           {error && <div className="form-error">{error}</div>}
 
@@ -1729,15 +1846,42 @@ function AuthModal({
           >
             {loading
               ? "Please wait..."
-              : mode === "admin"
-                ? "Admin Login"
-                : mode === "register"
-                  ? "Create Account"
-                  : "Login"}
+              : isReset
+                ? "Update Password"
+                : isForgot
+                  ? "Send Reset Email"
+                  : isAdmin
+                    ? "Admin Login"
+                    : isRegister
+                      ? "Create Account"
+                      : "Login"}
           </button>
         </form>
 
-        {mode !== "admin" && (
+        {/* ====================================================
+            LOGIN / REGISTER / RESET NAVIGATION
+        ==================================================== */}
+
+        {isLoginOrAdmin(mode) && (
+          <div
+            style={{
+              marginTop: "18px",
+              textAlign: "center",
+            }}
+          >
+            <p>
+              <button
+                type="button"
+                className="text-btn"
+                onClick={() => onModeChange("forgot")}
+              >
+                Forgot your password?
+              </button>
+            </p>
+          </div>
+        )}
+
+        {mode !== "admin" && mode !== "forgot" && mode !== "reset" && (
           <div
             style={{
               marginTop: "18px",
@@ -1770,6 +1914,23 @@ function AuthModal({
           </div>
         )}
 
+        {(isForgot || isReset) && (
+          <div
+            style={{
+              marginTop: "18px",
+              textAlign: "center",
+            }}
+          >
+            <button
+              type="button"
+              className="text-btn"
+              onClick={() => onModeChange("login")}
+            >
+              Back to Login
+            </button>
+          </div>
+        )}
+
         {mode === "admin" && (
           <div
             style={{
@@ -1789,6 +1950,10 @@ function AuthModal({
       </div>
     </Modal>
   );
+}
+
+function isLoginOrAdmin(mode) {
+  return mode === "login" || mode === "admin";
 }
 
 // ============================================================
@@ -1840,7 +2005,8 @@ function Home({ events, loading, remaining, onView, onBook, onEvents }) {
 
           <h1>
             CREATE, CONNECT
-            <br />&amp; MANAGE EVENTS
+            <br />
+            &amp; MANAGE EVENTS
           </h1>
 
           <p>There are currently no events available.</p>
@@ -1859,7 +2025,8 @@ function Home({ events, loading, remaining, onView, onBook, onEvents }) {
 
           <h1>
             CREATE, CONNECT
-            <br />&amp; MANAGE EVENTS
+            <br />
+            &amp; MANAGE EVENTS
           </h1>
 
           <p>
